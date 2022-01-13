@@ -1,19 +1,20 @@
 module Main where
 
-import Ambiente.Ambiente (test2,test,test3,testMovObst)
-
-import Utils (randomNumber, randomPos, randomPos2,adyacentesPos,createSquare)
+import Ambiente.Ambiente (test, test2, test3, testMovObst,testMOveOneChildren)
+import System.Random (getStdGen, newStdGen)
+import Utils (adyacentesPos, createSquare, randomDirections, randomNumber, testRandom)
 
 main :: IO ()
 main = do
-  a <- randomNumber 4
-  b <- randomNumber 4
-  f <- randomNumber 5
-  g <- randomNumber 5
-  let c = randomPos a b in print c
-  let d = randomPos f g in print d
+  g <- newStdGen
+  r <- testRandom (head (randomDirections g))
+  g <- newStdGen
+  ee <- testRandom (head (randomDirections g))
   let e = test2 in print e
-  let ady = adyacentesPos (1,1) in print ady
-  let sc = createSquare (2,2) 6 6 3 [] in print sc
+  let ady = adyacentesPos (1, 1) in print ady
+  let sc = createSquare (2, 2) 6 6 3 [] in print sc
   let tt = test3 in print tt
-  let testO = testMovObst in print testO
+
+  g <- newStdGen
+  let testO2 = testMOveOneChildren g in print testO2
+
