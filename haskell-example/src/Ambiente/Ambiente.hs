@@ -1,10 +1,7 @@
 module Ambiente.Ambiente
-  ( test,
-    test2,
-    test3,
-    testMovObst,
-    testMOveAllChildren,
+  ( 
     generateAmbiente,
+    moveAllChildren,
     Ambiente (..),
     Ninos (..),
     Suciedad (..),
@@ -20,7 +17,7 @@ import Elementos.Obstaculo (Obstaculo (Obstaculo), isobstaculoInPos, movListObst
 import Elementos.Robot (Robot (Robot), isRobotInPos)
 import Elementos.Suciedad (Suciedad (Suciedad), issuciedadInPos)
 import System.Random (StdGen)
-import Utils (Directions, adyacentesPos, isValidPos, randomDirectionToNum, randomDirections, randomNumber)
+import Utils (adyacentesPos, createSquare, isValidPos, randomNumber)
 
 data Ambiente = Ambiente
   { ninos :: Ninos,
@@ -50,33 +47,58 @@ movObstaculos ambiente@Ambiente {dimetions = (n, m), obstaculos = Obstaculo obs,
     nextLast = adyacentesPos lastObst !! dir
     movObs = movListObst obs allObst dir
 
+--resive un ambiente , la posicion del nino que quiere mover y la direccion en la que quiere moverse y retorna el ambinete moviendo el nino en caso de ser valida la posicion
 movOneChildren :: Ambiente -> (Int, Int) -> Int -> Ambiente
-movOneChildren ambiente@Ambiente {obstaculos = obs, robots = rob, suciedad = suc, corral = corr, dimetions = dim} posChildren dir = if isEmpty ambiente (adyacentesPos posChildren !! dir) then Ambiente {ninos = Ninos (updateChildren ambiente posChildren (adyacentesPos posChildren !! dir)), suciedad = suc, robots = rob, obstaculos = obs, dimetions = dim, corral = corr} else movObstaculos ambiente posChildren dir
+movOneChildren ambiente@Ambiente {obstaculos = obs, robots = rob, suciedad = suc, corral = corr, dimetions = dim@(n,m)} posChildren dir =
+  if isEmpty ambiente (adyacentesPos posChildren !! dir) && isValidPos (adyacentesPos posChildren !! dir) n m
+    then Ambiente {ninos = Ninos (updateChildren ambiente posChildren (adyacentesPos posChildren !! dir)), suciedad = suc, robots = rob, obstaculos = obs, dimetions = dim, corral = corr}
+    else movObstaculos ambiente posChildren dir
 
+
+--resive el ambiente y un generador de numeros aleatorios para generar las direcciones de movimiento de los ninos y si estos deciden moverse o no 
+-- y retorna el ambiente con los movimientos realizados
 moveAllChildren :: Ambiente -> StdGen -> Ambiente
 moveAllChildren ambiente@Ambiente {ninos = Ninos ni} gen =
   let posis = take (length ni) (randomNumber 3 gen)
       movOrNot = take (length ni) (randomNumber 1 gen)
    in moveAllChildren1 ambiente posis movOrNot ni
 
+--funcion secundaria para mover los ninos, resive el ambiente las direcciones del movimiento y si estos se moveran o no,
+-- y la lista de los ninos a mover y retorna el ambiente con los movimientos realizados
 moveAllChildren1 :: Ambiente -> [Int] -> [Int] -> [(Int, Int)] -> Ambiente
 moveAllChildren1 ambiente [] _ _ = ambiente
 moveAllChildren1 ambiente _ [] _ = ambiente
 moveAllChildren1 ambiente _ _ [] = ambiente
-moveAllChildren1 ambiente (x : xs) (z : zs) (y : ys) = if z == 1 then moveAllChildren1 (movOneChildren ambiente y x) xs zs ys else moveAllChildren1 ambiente xs zs ys
+moveAllChildren1 ambiente (x : xs) (z : zs) (y : ys) =
+  if z == 1
+    then moveAllChildren1 (movOneChildren ambiente y x) xs zs ys
+    else moveAllChildren1 ambiente xs zs ys
 
+--cambia la posicion de un nino por la nueva posicion, en caso de que este pueda moverse
 updateChildren :: Ambiente -> (Int, Int) -> (Int, Int) -> [(Int, Int)]
-updateChildren ambiente@Ambiente {ninos = Ninos ni, obstaculos = obs} pos1 pos2 = if not (isEmpty ambiente pos2) && not (isobstaculoInPos obs pos2) then ni else updateChildren2 ni pos1 pos2
+updateChildren ambiente@Ambiente {ninos = Ninos ni, obstaculos = obs} pos1 pos2 =
+  if not (isEmpty ambiente pos2) && not (isobstaculoInPos obs pos2)
+    then ni
+    else updateChildren2 ni pos1 pos2
 
+--genera el ambiente donde se realiza la simulacion
 generateAmbiente :: Int -> Int -> Int -> Int -> Int -> Int -> StdGen -> StdGen -> Ambiente
-generateAmbiente n m cantNinos cantObst cantBasura cantRob gen1 gen2 =
+generateAmbiente n m cantNinos cantObst cantBasura cantRob  gen1 gen2 =
   let posX = randomNumber (n -1) gen1
       posY = randomNumber (m -1) gen2
-      ambNinos = generateNinos Ambiente {ninos = Ninos [], robots = Robot [], corral = Corral [], suciedad = Suciedad [], obstaculos = Obstaculo [], dimetions = (n, m)} posX posY cantNinos
+      ambCorral = generateCorral n m (head posX, head posY) cantNinos
+      ambNinos = generateNinos ambCorral posX posY cantNinos
       ambObst = generateObs ambNinos posX posY cantObst
       ambSuciedad = generateSuciedad ambObst posX posY cantBasura
-  in generateRobots ambSuciedad posX posY cantRob    
+   in generateRobots ambSuciedad posX posY cantRob
 
+--genera el corral 
+generateCorral :: Int -> Int -> (Int, Int) -> Int -> Ambiente
+generateCorral n m initPos c =
+  let corral = createSquare [initPos] [] c n m
+   in Ambiente {ninos = Ninos [], robots = Robot [], corral = Corral corral, suciedad = Suciedad [], obstaculos = Obstaculo [], dimetions = (n, m)}
+
+--genera los ninos
 generateNinos :: Ambiente -> [Int] -> [Int] -> Int -> Ambiente
 generateNinos ambiente (x : xs) (y : ys) 0 = ambiente
 generateNinos ambiente _ [] _ = ambiente
@@ -86,6 +108,7 @@ generateNinos ambiente@Ambiente {ninos = Ninos ni, obstaculos = obs, robots = ro
     then generateNinos Ambiente {ninos = Ninos ((x, y) : ni), obstaculos = obs, robots = rob, suciedad = suc, corral = cor, dimetions = (n, m)} xs ys (c -1)
     else generateNinos ambiente xs ys c
 
+--genera los obstaculos
 generateObs :: Ambiente -> [Int] -> [Int] -> Int -> Ambiente
 generateObs ambiente (x : xs) (y : ys) 0 = ambiente
 generateObs ambiente _ [] _ = ambiente
@@ -95,6 +118,7 @@ generateObs ambiente@Ambiente {ninos = ni, obstaculos = Obstaculo obs, robots = 
     then generateObs Ambiente {ninos = ni, obstaculos = Obstaculo ((x, y) : obs), robots = rob, suciedad = suc, corral = cor, dimetions = (n, m)} xs ys (c -1)
     else generateObs ambiente xs ys c
 
+--gernera la suciedad
 generateSuciedad :: Ambiente -> [Int] -> [Int] -> Int -> Ambiente
 generateSuciedad ambiente (x : xs) (y : ys) 0 = ambiente
 generateSuciedad ambiente _ [] _ = ambiente
@@ -104,6 +128,7 @@ generateSuciedad ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = rob, 
     then generateSuciedad Ambiente {ninos = ni, obstaculos = obs, robots = rob, suciedad = Suciedad ((x, y) : suc), corral = cor, dimetions = (n, m)} xs ys (c -1)
     else generateSuciedad ambiente xs ys c
 
+--genera los robots
 generateRobots :: Ambiente -> [Int] -> [Int] -> Int -> Ambiente
 generateRobots ambiente (x : xs) (y : ys) 0 = ambiente
 generateRobots ambiente _ [] _ = ambiente
@@ -113,19 +138,3 @@ generateRobots ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = Robot r
     then generateRobots Ambiente {ninos = ni, obstaculos = obs, robots = Robot ((x, y) : rob), suciedad = suc, corral = cor, dimetions = (n, m)} xs ys (c -1)
     else generateRobots ambiente xs ys c
 
-test :: Ambiente -> Bool
-test ambiente = isEmpty ambiente (2, 3)
-
-test2 :: Bool
-test2 = test Ambiente {ninos = Ninos [(2, 3)], robots = Robot [(1, 4)], corral = Corral [(4, 2)], suciedad = Suciedad [(2, 3)], obstaculos = Obstaculo [(1, 3), (1, 4)], dimetions = (5, 5)}
-
-test3 :: [(Int, Int)]
-test3 = let amb = Ambiente {ninos = Ninos [(2, 3)], robots = Robot [(1, 4)], corral = Corral [(4, 2)], suciedad = Suciedad [(2, 3)], obstaculos = Obstaculo [(1, 3), (1, 4), (1, 5)], dimetions = (5, 6)} in getAllObstaculosInDirections amb (1, 3) 0
-
-testMovObst :: Int -> Ambiente
-testMovObst pos =
-  let amb = Ambiente {ninos = Ninos [(2, 3)], robots = Robot [(2, 4)], corral = Corral [(4, 2)], suciedad = Suciedad [(2, 3)], obstaculos = Obstaculo [(1, 3), (1, 4)], dimetions = (5, 6)}
-   in movObstaculos amb (1, 3) pos
-
-testMOveAllChildren :: StdGen -> Ambiente
-testMOveAllChildren = moveAllChildren Ambiente {ninos = Ninos [(1, 2), (2, 2)], robots = Robot [(2, 4)], corral = Corral [(4, 2)], suciedad = Suciedad [(2, 3)], obstaculos = Obstaculo [(1, 3), (1, 4)], dimetions = (5, 6)}
