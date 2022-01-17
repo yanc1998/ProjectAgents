@@ -19,6 +19,7 @@ import Elementos.Suciedad (Suciedad (Suciedad), issuciedadInPos)
 import System.Random (StdGen)
 import Utils (adyacentesPos, createSquare, isValidPos, randomNumber)
 
+--ambiente 
 data Ambiente = Ambiente
   { ninos :: Ninos,
     robots :: Robot,
@@ -29,14 +30,25 @@ data Ambiente = Ambiente
   }
   deriving (Show)
 
+--revisa si el ambiente en esa posicion esta vacio
 isEmpty :: Ambiente -> (Int, Int) -> Bool
 isEmpty ambiente@Ambiente {ninos = n, robots = r, obstaculos = o, suciedad = s, corral = c} pos = not (isninosInPos n pos || isRobotInPos r pos || isobstaculoInPos o pos || issuciedadInPos s pos || iscorralInPos c pos)
 
+--resive un ambiente y una posicion y retorna verdadero si hay un nino en el corral en esa posicion
+isNinosInCorral :: Ambiente -> (Int,Int) -> Bool
+isNinosInCorral ambiente@Ambiente{ninos = ni,corral = cor} pos = isninosInPos ni pos && iscorralInPos cor pos
+
+--resive un ambiente y una posicion y retorna verdadero si hay un nino sobre un robot en esa posicion
+isNinoUpRobot ::Ambiente -> (Int,Int) -> Bool 
+isNinoUpRobot ambiente@Ambiente{ninos = ni,robots = rob} pos = isninosInPos ni pos && isRobotInPos rob pos
+
+--resive el ambiente una posicion y una direccion y me retorna todos los obstaculos que se encuentran seguidos en esa direccion
 getAllObstaculosInDirections :: Ambiente -> (Int, Int) -> Int -> [(Int, Int)]
 getAllObstaculosInDirections ambiente@Ambiente {dimetions = (n, m), obstaculos = o} pos dir = if isValidPos postoMov n m && not (isEmpty ambiente postoMov) && isobstaculoInPos o postoMov then pos : getAllObstaculosInDirections ambiente postoMov dir else [pos]
   where
     postoMov = adyacentesPos pos !! dir
 
+--mueve todos los obstaculos a partir de una posicion y una direccion 
 movObstaculos :: Ambiente -> (Int, Int) -> Int -> Ambiente
 movObstaculos ambiente@Ambiente {dimetions = (n, m), obstaculos = Obstaculo obs, suciedad = s, corral = c, robots = r, ninos = Ninos ni} pos dir = if isValidPos nextLast n m && isEmpty ambiente nextLast then Ambiente {dimetions = (n, m), suciedad = s, corral = c, robots = r, ninos = Ninos (updateChildren ambiente pos posfirstObst), obstaculos = Obstaculo movObs} else ambiente
   where
@@ -95,7 +107,7 @@ generateAmbiente n m cantNinos cantObst cantBasura cantRob  gen1 gen2 =
 --genera el corral 
 generateCorral :: Int -> Int -> (Int, Int) -> Int -> Ambiente
 generateCorral n m initPos c =
-  let corral = createSquare [initPos] [] c n m
+  let corral = createSquare initPos n m c
    in Ambiente {ninos = Ninos [], robots = Robot [], corral = Corral corral, suciedad = Suciedad [], obstaculos = Obstaculo [], dimetions = (n, m)}
 
 --genera los ninos
