@@ -60,7 +60,7 @@ existFreeNino ambiente@Ambiente {ninos = Ninos ni} = let ninosFree = [n | n <- n
 getAllObstaculosInDirections :: Ambiente -> (Int, Int) -> Int -> [(Int, Int)]
 getAllObstaculosInDirections ambiente@Ambiente {dimetions = (n, m), obstaculos = o} pos dir = if isValidPos postoMov n m && not (isEmpty ambiente postoMov) && isobstaculoInPos o postoMov then pos : getAllObstaculosInDirections ambiente postoMov dir else [pos]
   where
-    postoMov = adyacentesPos pos !! dir
+    postoMov = adyacentesPosToSquare pos !! dir
 
 --mueve todos los obstaculos a partir de una posicion y una direccion
 movObstaculos :: Ambiente -> (Int, Int) -> Int -> Ambiente
@@ -69,25 +69,26 @@ movObstaculos ambiente@Ambiente {dimetions = (n, m), obstaculos = Obstaculo obs,
     then Ambiente {dimetions = (n, m), suciedad = s, corral = c, robots = r, ninos = Ninos (updateChildren ambiente pos posfirstObst), obstaculos = Obstaculo movObs, robotChargeNino = robN, posMidelCorral = posM}
     else ambiente
   where
-    posfirstObst = adyacentesPos pos !! dir
+    posfirstObst = adyacentesPosToSquare pos !! dir
     allObst = getAllObstaculosInDirections ambiente posfirstObst dir
     len = length allObst
     lastObst = allObst !! (len -1)
-    nextLast = adyacentesPos lastObst !! dir
+    nextLast = adyacentesPosToSquare lastObst !! dir
     movObs = movListObst obs allObst dir
 
 --resive un ambiente , la posicion del nino que quiere mover y la direccion en la que quiere moverse y retorna el ambinete moviendo el nino en caso de ser valida la posicion
 movOneChildren :: Ambiente -> (Int, Int) -> Int -> Ambiente
-movOneChildren ambiente@Ambiente {obstaculos = obs, robots = rob, suciedad = suc, corral = corr, dimetions = dim@(n, m), robotChargeNino = robN, posMidelCorral = posM} posChildren dir =
-  if isEmpty ambiente (adyacentesPos posChildren !! dir) && isValidPos (adyacentesPos posChildren !! dir) n m
-    then Ambiente {ninos = Ninos (updateChildren ambiente posChildren (adyacentesPos posChildren !! dir)), suciedad = suc, robots = rob, obstaculos = obs, dimetions = dim, corral = corr, robotChargeNino = robN, posMidelCorral = posM}
-    else movObstaculos ambiente posChildren dir
+movOneChildren ambiente@Ambiente {obstaculos = obs, robots = rob, suciedad = suc, corral = corr, dimetions = dim@(n, m), robotChargeNino = robN, posMidelCorral = posM} posChildren dir
+  | not (isValidPos (adyacentesPosToSquare posChildren !! dir) n m) = ambiente
+  | isValidPos (adyacentesPosToSquare posChildren !! dir) n m && isEmpty ambiente (adyacentesPosToSquare posChildren !! dir) = Ambiente {ninos = Ninos (updateChildren ambiente posChildren (adyacentesPosToSquare posChildren !! dir)), suciedad = suc, robots = rob, obstaculos = obs, dimetions = dim, corral = corr, robotChargeNino = robN, posMidelCorral = posM}
+  | isobstaculoInPos obs (adyacentesPosToSquare posChildren !! dir) = movObstaculos ambiente posChildren dir
+  | otherwise = ambiente
 
 --resive el ambiente y un generador de numeros aleatorios para generar las direcciones de movimiento de los ninos y si estos deciden moverse o no
 -- y retorna el ambiente con los movimientos realizados
 moveAllChildren :: Ambiente -> StdGen -> Ambiente
 moveAllChildren ambiente@Ambiente {ninos = Ninos ni} gen =
-  let posis = take (length ni) (randomNumber 3 gen)
+  let posis = take (length ni) (randomNumber 7 gen)
       movOrNot = take (length ni) (randomNumber 1 gen)
    in moveAllChildren1 ambiente posis movOrNot ni
 
@@ -267,8 +268,6 @@ selectMovtoCorral ambiente@Ambiente {corral = Corral cor, dimetions = (n, m), po
           if iscorralInPos (Corral cor) posRobot && distance posRobot posM == distToMidel
             then sueltaNino ambiente posRobot
             else moveRobotToCorral ambiente posRobot posToMov f
-
-
 
 selectMovToSuciedad :: Ambiente -> (Int, Int) -> Ambiente
 selectMovToSuciedad ambiente@Ambiente {ninos = ni, robotChargeNino = rcn, obstaculos = obs, suciedad = suc, corral = cor, dimetions = dim, robots = Robot rob, posMidelCorral = posM} posRobot =
