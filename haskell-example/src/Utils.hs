@@ -9,7 +9,7 @@ module Utils
     remove,
     getsecondElement,
     getfirstElement,
-    distance
+    distance,
   )
 where
 
@@ -30,7 +30,7 @@ directions = [(0, 1), (1, 0), (-1, 0), (0, -1)]
 
 --las 8 direcciones del movimineto para crear el cuadrado del corral
 directionsToSquare :: [(Int, Int)]
-directionsToSquare = directions ++ [(1, -1), (-1, 1), (1, 1), (-1, -1)]
+directionsToSquare = [(-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1)]
 
 --resive una posicion y devuelve la lista de las posiciones andyacentes a esta (para las 4 direcciones del movimiento del nino)
 adyacentesPos :: (Int, Int) -> [(Int, Int)]

@@ -238,7 +238,7 @@ bFSSuciedad :: Ambiente -> (Int, Int) -> [((Int, Int), Int)] -> [(Int, Int)] -> 
 bFSSuciedad _ _ [] _ dist father = (dist, father)
 bFSSuciedad _ _ _ _ [] _ = ([], [])
 bFSSuciedad ambiente@Ambiente {suciedad = suc, dimetions = (n, m), corral = cor, robots = rob, ninos = ni, obstaculos = obs} initPos pila@((p, d) : ps) visit dist father
-  | isContain visit p || (isRobotInPos rob p && p /= initPos) || isninosInPos ni p || isobstaculoInPos obs p = bFSSuciedad ambiente initPos ps visit dist father
+  | isContain visit p || (isRobotInPos rob p && p /= initPos) || isninosInPos ni p && p /= initPos || isobstaculoInPos obs p = bFSSuciedad ambiente initPos ps visit dist father
   | issuciedadInPos suc p = ((p, d) : dist, father)
   | otherwise = bFSSuciedad ambiente initPos (ps ++ myMap ([h | h <- adyacentesPosToSquare p, isValidPos h n m]) (d + 1)) (p : visit) ((p, d) : dist) (father ++ [(f, p) | f <- adyacentesPosToSquare p, isValidPos f n m, not (isContainInFather father f)])
 
@@ -256,7 +256,7 @@ selectMovtoNino ambiente@Ambiente {robots = Robot rob} posRobot =
       pat = getPath posRobot (fst (head d)) f
    in pat !! 1
 
-
+--selecciona la accion a realizar para llegar al corral o soltar el nino
 selectMovtoCorral :: Ambiente -> (Int, Int) -> Ambiente
 selectMovtoCorral ambiente@Ambiente {corral = Corral cor, dimetions = (n, m), posMidelCorral = posM} posRobot =
   let dist@(d, f) = bFSCorral ambiente posRobot [(posRobot, 0)] [] [(posRobot, 0)] []
@@ -265,8 +265,10 @@ selectMovtoCorral ambiente@Ambiente {corral = Corral cor, dimetions = (n, m), po
         then ambiente
         else
           if iscorralInPos (Corral cor) posRobot && distance posRobot posM == distToMidel
-            then sueltaNino ambiente posRobot 
+            then sueltaNino ambiente posRobot
             else moveRobotToCorral ambiente posRobot posToMov f
+
+
 
 selectMovToSuciedad :: Ambiente -> (Int, Int) -> Ambiente
 selectMovToSuciedad ambiente@Ambiente {ninos = ni, robotChargeNino = rcn, obstaculos = obs, suciedad = suc, corral = cor, dimetions = dim, robots = Robot rob, posMidelCorral = posM} posRobot =
@@ -320,7 +322,6 @@ clean ambiente@Ambiente {ninos = ni, robotChargeNino = rcn, obstaculos = obs, su
 
 testSelectMovToCorral :: Ambiente -> ([((Int, Int), Int)], [((Int, Int), (Int, Int))])
 testSelectMovToCorral ambiente@Ambiente {robots = Robot rob, corral = Corral cor, dimetions = (n, m)} = let dist@(d, f) = bFSCorral ambiente (head rob) [(head rob, 0)] [] [(head rob, 0)] [] in dist --selectMovtoCorralVisit ambiente d cor (n * m + 1) (-1, -1)
-
 
 testSekctMovToNino :: Ambiente -> ((Int, Int), Int)
 testSekctMovToNino ambiente@Ambiente {robots = Robot rob, corral = Corral cor, dimetions = (n, m)} = let dist@(d, f) = bFSCorral ambiente (head rob) [(head rob, 0)] [] [(head rob, 0)] [] in selectMovtoCorralVisit ambiente d cor (n * m + 1) (-1, -1)
