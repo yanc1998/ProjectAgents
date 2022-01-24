@@ -9,6 +9,7 @@ module Utils
     remove,
     getsecondElement,
     getfirstElement,
+    distance
   )
 where
 
@@ -66,8 +67,11 @@ remove (x : xs) element = if x == element then xs else x : remove xs element
 
 getsecondElement :: (Eq a, Eq b) => [(a, b)] -> b -> a -> b
 getsecondElement [] base _ = base
-getsecondElement ((first, second) : xs) base element = if element == first then second else getsecondElement xs base first
+getsecondElement ((first, second) : xs) base element = if element == first then second else getsecondElement xs base element
 
 getfirstElement :: (Eq a, Eq b) => [(a, b)] -> a -> b -> a
 getfirstElement [] base _ = base
-getfirstElement ((first, second) : xs) base element = if element == second then first else getfirstElement xs base second
+getfirstElement ((first, second) : xs) base element = if element == second then first else getfirstElement xs base element
+
+distance :: (Int, Int) -> (Int, Int) -> Int
+distance (x1, y1) (x2, y2) = abs (x1 - x2) + abs (y1 - y2)

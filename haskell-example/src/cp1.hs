@@ -72,3 +72,6 @@ pares (x : xs) = if x `mod` 2 == 0 then [x] ++ pares xs else pares xs
 masde :: (Num a) => Int -> [[a]] -> [[a]]
 masde _ [] = []
 masde n (x : xs) = if length x > n then x : masde n xs else masde n xs
+
+derive :: (Double -> Double) -> Double -> Double
+derive f x = (f (x + 0.001) - f x) / 0.001
