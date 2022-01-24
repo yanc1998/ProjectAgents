@@ -1,7 +1,13 @@
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+
 module Ambiente.Ambiente
-  ( 
-    generateAmbiente,
+  ( generateAmbiente,
     moveAllChildren,
+    bFSNinos,
+    getPath,
+    selectMovtoNino,
+    robotAgent,
+    testSelectMovToCorral,
     Ambiente (..),
     Ninos (..),
     Suciedad (..),
@@ -17,16 +23,18 @@ import Elementos.Obstaculo (Obstaculo (Obstaculo), isobstaculoInPos, movListObst
 import Elementos.Robot (Robot (Robot), isRobotInPos)
 import Elementos.Suciedad (Suciedad (Suciedad), issuciedadInPos)
 import System.Random (StdGen)
-import Utils (adyacentesPos, createSquare, isValidPos, randomNumber)
+import Utils (adyacentesPos, adyacentesPosToSquare, createSquare, getfirstElement, getsecondElement, isContain, isValidPos, randomNumber, remove, update)
 
---ambiente 
+--ambiente
 data Ambiente = Ambiente
   { ninos :: Ninos,
     robots :: Robot,
     corral :: Corral,
     suciedad :: Suciedad,
     obstaculos :: Obstaculo,
-    dimetions :: (Int, Int)
+    dimetions :: (Int, Int),
+    robotChargeNino :: [((Int, Int), Bool)],
+    posMidelCorral :: (Int, Int)
   }
   deriving (Show)
 
@@ -35,12 +43,15 @@ isEmpty :: Ambiente -> (Int, Int) -> Bool
 isEmpty ambiente@Ambiente {ninos = n, robots = r, obstaculos = o, suciedad = s, corral = c} pos = not (isninosInPos n pos || isRobotInPos r pos || isobstaculoInPos o pos || issuciedadInPos s pos || iscorralInPos c pos)
 
 --resive un ambiente y una posicion y retorna verdadero si hay un nino en el corral en esa posicion
-isNinosInCorral :: Ambiente -> (Int,Int) -> Bool
-isNinosInCorral ambiente@Ambiente{ninos = ni,corral = cor} pos = isninosInPos ni pos && iscorralInPos cor pos
+isNinosInCorral :: Ambiente -> (Int, Int) -> Bool
+isNinosInCorral ambiente@Ambiente {ninos = ni, corral = cor} pos = isninosInPos ni pos && iscorralInPos cor pos
 
 --resive un ambiente y una posicion y retorna verdadero si hay un nino sobre un robot en esa posicion
-isNinoUpRobot ::Ambiente -> (Int,Int) -> Bool 
-isNinoUpRobot ambiente@Ambiente{ninos = ni,robots = rob} pos = isninosInPos ni pos && isRobotInPos rob pos
+isNinoUpRobot :: Ambiente -> (Int, Int) -> Bool
+isNinoUpRobot ambiente@Ambiente {robotChargeNino = robN} = getsecondElement robN False
+
+isRobotInCorral :: Ambiente -> (Int, Int) -> Bool
+isRobotInCorral ambiente@Ambiente {robots = rob, corral = cor} pos = isRobotInPos rob pos && iscorralInPos cor pos
 
 --resive el ambiente una posicion y una direccion y me retorna todos los obstaculos que se encuentran seguidos en esa direccion
 getAllObstaculosInDirections :: Ambiente -> (Int, Int) -> Int -> [(Int, Int)]
@@ -48,9 +59,12 @@ getAllObstaculosInDirections ambiente@Ambiente {dimetions = (n, m), obstaculos =
   where
     postoMov = adyacentesPos pos !! dir
 
---mueve todos los obstaculos a partir de una posicion y una direccion 
+--mueve todos los obstaculos a partir de una posicion y una direccion
 movObstaculos :: Ambiente -> (Int, Int) -> Int -> Ambiente
-movObstaculos ambiente@Ambiente {dimetions = (n, m), obstaculos = Obstaculo obs, suciedad = s, corral = c, robots = r, ninos = Ninos ni} pos dir = if isValidPos nextLast n m && isEmpty ambiente nextLast then Ambiente {dimetions = (n, m), suciedad = s, corral = c, robots = r, ninos = Ninos (updateChildren ambiente pos posfirstObst), obstaculos = Obstaculo movObs} else ambiente
+movObstaculos ambiente@Ambiente {dimetions = (n, m), obstaculos = Obstaculo obs, suciedad = s, corral = c, robots = r, ninos = Ninos ni, robotChargeNino = robN, posMidelCorral = posM} pos dir =
+  if isValidPos nextLast n m && isEmpty ambiente nextLast
+    then Ambiente {dimetions = (n, m), suciedad = s, corral = c, robots = r, ninos = Ninos (updateChildren ambiente pos posfirstObst), obstaculos = Obstaculo movObs, robotChargeNino = robN, posMidelCorral = posM}
+    else ambiente
   where
     posfirstObst = adyacentesPos pos !! dir
     allObst = getAllObstaculosInDirections ambiente posfirstObst dir
@@ -61,13 +75,12 @@ movObstaculos ambiente@Ambiente {dimetions = (n, m), obstaculos = Obstaculo obs,
 
 --resive un ambiente , la posicion del nino que quiere mover y la direccion en la que quiere moverse y retorna el ambinete moviendo el nino en caso de ser valida la posicion
 movOneChildren :: Ambiente -> (Int, Int) -> Int -> Ambiente
-movOneChildren ambiente@Ambiente {obstaculos = obs, robots = rob, suciedad = suc, corral = corr, dimetions = dim@(n,m)} posChildren dir =
+movOneChildren ambiente@Ambiente {obstaculos = obs, robots = rob, suciedad = suc, corral = corr, dimetions = dim@(n, m), robotChargeNino = robN, posMidelCorral = posM} posChildren dir =
   if isEmpty ambiente (adyacentesPos posChildren !! dir) && isValidPos (adyacentesPos posChildren !! dir) n m
-    then Ambiente {ninos = Ninos (updateChildren ambiente posChildren (adyacentesPos posChildren !! dir)), suciedad = suc, robots = rob, obstaculos = obs, dimetions = dim, corral = corr}
+    then Ambiente {ninos = Ninos (updateChildren ambiente posChildren (adyacentesPos posChildren !! dir)), suciedad = suc, robots = rob, obstaculos = obs, dimetions = dim, corral = corr, robotChargeNino = robN, posMidelCorral = posM}
     else movObstaculos ambiente posChildren dir
 
-
---resive el ambiente y un generador de numeros aleatorios para generar las direcciones de movimiento de los ninos y si estos deciden moverse o no 
+--resive el ambiente y un generador de numeros aleatorios para generar las direcciones de movimiento de los ninos y si estos deciden moverse o no
 -- y retorna el ambiente con los movimientos realizados
 moveAllChildren :: Ambiente -> StdGen -> Ambiente
 moveAllChildren ambiente@Ambiente {ninos = Ninos ni} gen =
@@ -89,13 +102,13 @@ moveAllChildren1 ambiente (x : xs) (z : zs) (y : ys) =
 --cambia la posicion de un nino por la nueva posicion, en caso de que este pueda moverse
 updateChildren :: Ambiente -> (Int, Int) -> (Int, Int) -> [(Int, Int)]
 updateChildren ambiente@Ambiente {ninos = Ninos ni, obstaculos = obs} pos1 pos2 =
-  if not (isEmpty ambiente pos2) && not (isobstaculoInPos obs pos2)
-    then ni
-    else updateChildren2 ni pos1 pos2
+  if not (isNinosInCorral ambiente pos1) && (isEmpty ambiente pos2 || isobstaculoInPos obs pos2)
+    then updateChildren2 ni pos1 pos2
+    else ni
 
 --genera el ambiente donde se realiza la simulacion
 generateAmbiente :: Int -> Int -> Int -> Int -> Int -> Int -> StdGen -> StdGen -> Ambiente
-generateAmbiente n m cantNinos cantObst cantBasura cantRob  gen1 gen2 =
+generateAmbiente n m cantNinos cantObst cantBasura cantRob gen1 gen2 =
   let posX = randomNumber (n -1) gen1
       posY = randomNumber (m -1) gen2
       ambCorral = generateCorral n m (head posX, head posY) cantNinos
@@ -104,20 +117,20 @@ generateAmbiente n m cantNinos cantObst cantBasura cantRob  gen1 gen2 =
       ambSuciedad = generateSuciedad ambObst posX posY cantBasura
    in generateRobots ambSuciedad posX posY cantRob
 
---genera el corral 
+--genera el corral
 generateCorral :: Int -> Int -> (Int, Int) -> Int -> Ambiente
 generateCorral n m initPos c =
   let corral = createSquare initPos n m c
-   in Ambiente {ninos = Ninos [], robots = Robot [], corral = Corral corral, suciedad = Suciedad [], obstaculos = Obstaculo [], dimetions = (n, m)}
+   in Ambiente {ninos = Ninos [], robots = Robot [], corral = Corral corral, suciedad = Suciedad [], obstaculos = Obstaculo [], dimetions = (n, m), robotChargeNino = [], posMidelCorral = initPos}
 
 --genera los ninos
 generateNinos :: Ambiente -> [Int] -> [Int] -> Int -> Ambiente
 generateNinos ambiente (x : xs) (y : ys) 0 = ambiente
 generateNinos ambiente _ [] _ = ambiente
 generateNinos ambiente [] _ _ = ambiente
-generateNinos ambiente@Ambiente {ninos = Ninos ni, obstaculos = obs, robots = rob, suciedad = suc, corral = cor, dimetions = (n, m)} (x : xs) (y : ys) c =
+generateNinos ambiente@Ambiente {ninos = Ninos ni, obstaculos = obs, robots = rob, suciedad = suc, corral = cor, dimetions = (n, m), robotChargeNino = robN, posMidelCorral = posM} (x : xs) (y : ys) c =
   if isEmpty ambiente (x, y)
-    then generateNinos Ambiente {ninos = Ninos ((x, y) : ni), obstaculos = obs, robots = rob, suciedad = suc, corral = cor, dimetions = (n, m)} xs ys (c -1)
+    then generateNinos Ambiente {ninos = Ninos ((x, y) : ni), obstaculos = obs, robots = rob, suciedad = suc, corral = cor, dimetions = (n, m), robotChargeNino = robN, posMidelCorral = posM} xs ys (c -1)
     else generateNinos ambiente xs ys c
 
 --genera los obstaculos
@@ -125,9 +138,9 @@ generateObs :: Ambiente -> [Int] -> [Int] -> Int -> Ambiente
 generateObs ambiente (x : xs) (y : ys) 0 = ambiente
 generateObs ambiente _ [] _ = ambiente
 generateObs ambiente [] _ _ = ambiente
-generateObs ambiente@Ambiente {ninos = ni, obstaculos = Obstaculo obs, robots = rob, suciedad = suc, corral = cor, dimetions = (n, m)} (x : xs) (y : ys) c =
+generateObs ambiente@Ambiente {ninos = ni, obstaculos = Obstaculo obs, robots = rob, suciedad = suc, corral = cor, dimetions = (n, m), robotChargeNino = robN, posMidelCorral = posM} (x : xs) (y : ys) c =
   if isEmpty ambiente (x, y)
-    then generateObs Ambiente {ninos = ni, obstaculos = Obstaculo ((x, y) : obs), robots = rob, suciedad = suc, corral = cor, dimetions = (n, m)} xs ys (c -1)
+    then generateObs Ambiente {ninos = ni, obstaculos = Obstaculo ((x, y) : obs), robots = rob, suciedad = suc, corral = cor, dimetions = (n, m), robotChargeNino = robN, posMidelCorral = posM} xs ys (c -1)
     else generateObs ambiente xs ys c
 
 --gernera la suciedad
@@ -135,9 +148,9 @@ generateSuciedad :: Ambiente -> [Int] -> [Int] -> Int -> Ambiente
 generateSuciedad ambiente (x : xs) (y : ys) 0 = ambiente
 generateSuciedad ambiente _ [] _ = ambiente
 generateSuciedad ambiente [] _ _ = ambiente
-generateSuciedad ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = rob, suciedad = Suciedad suc, corral = cor, dimetions = (n, m)} (x : xs) (y : ys) c =
+generateSuciedad ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = rob, suciedad = Suciedad suc, corral = cor, dimetions = (n, m), robotChargeNino = robN, posMidelCorral = posM} (x : xs) (y : ys) c =
   if isEmpty ambiente (x, y)
-    then generateSuciedad Ambiente {ninos = ni, obstaculos = obs, robots = rob, suciedad = Suciedad ((x, y) : suc), corral = cor, dimetions = (n, m)} xs ys (c -1)
+    then generateSuciedad Ambiente {ninos = ni, obstaculos = obs, robots = rob, suciedad = Suciedad ((x, y) : suc), corral = cor, dimetions = (n, m), robotChargeNino = robN, posMidelCorral = posM} xs ys (c -1)
     else generateSuciedad ambiente xs ys c
 
 --genera los robots
@@ -145,8 +158,139 @@ generateRobots :: Ambiente -> [Int] -> [Int] -> Int -> Ambiente
 generateRobots ambiente (x : xs) (y : ys) 0 = ambiente
 generateRobots ambiente _ [] _ = ambiente
 generateRobots ambiente [] _ _ = ambiente
-generateRobots ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = Robot rob, suciedad = suc, corral = cor, dimetions = (n, m)} (x : xs) (y : ys) c =
+generateRobots ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = Robot rob, suciedad = suc, corral = cor, dimetions = (n, m), robotChargeNino = robN, posMidelCorral = posM} (x : xs) (y : ys) c =
   if isEmpty ambiente (x, y)
-    then generateRobots Ambiente {ninos = ni, obstaculos = obs, robots = Robot ((x, y) : rob), suciedad = suc, corral = cor, dimetions = (n, m)} xs ys (c -1)
+    then generateRobots Ambiente {ninos = ni, obstaculos = obs, robots = Robot ((x, y) : rob), suciedad = suc, corral = cor, dimetions = (n, m), robotChargeNino = ((x, y), False) : robN, posMidelCorral = posM} xs ys (c -1)
     else generateRobots ambiente xs ys c
 
+robotAgent :: Ambiente -> Ambiente
+robotAgent ambiente@Ambiente {robots = Robot r} = moveAllRobotAgent ambiente r
+
+moveAllRobotAgent :: Ambiente -> [(Int, Int)] -> Ambiente
+moveAllRobotAgent ambiente [] = ambiente
+moveAllRobotAgent ambiente robots@(r : rs) = moveAllRobotAgent (moveOneRobotAgent ambiente r) rs
+
+--arreglar esto ,hacer el agente,estoy haciendo el bfs para saber para que direccion moverme
+moveOneRobotAgent :: Ambiente -> (Int, Int) -> Ambiente
+moveOneRobotAgent ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = Robot rob, suciedad = suc, corral = cor, dimetions = dim, robotChargeNino = robN, posMidelCorral = posM} pos
+  | isNinoUpRobot ambiente pos = selectMovtoCorral ambiente pos
+  | is && not (isNinosInCorral ambiente posNino) && not (isNinosInCorral ambiente pos) = cargaNino ambiente posNino pos --si hay una nino alcanzable cojelo
+  | not (isNinoUpRobot ambiente pos) --si no hay un nino alzanzable ni ensima del robot busca el nino mas sercano
+    =
+    let toMov = selectMovtoNino ambiente pos --seleccionar la mejor posicion a moverse
+        robotNewPos = update rob pos toMov --mover el robot
+        es = getsecondElement robN False pos --buscar el estado del robot(si hay alguien ensima de el)
+        newRobotChargeNino = update robN (pos, es) (toMov, es) --cambiar la posicion del robot en la lista de si tiene a alguien arriba
+     in Ambiente {ninos = ni, robots = Robot robotNewPos, obstaculos = obs, suciedad = suc, dimetions = dim, robotChargeNino = newRobotChargeNino, corral = cor, posMidelCorral = posM}
+  | otherwise = ambiente
+  where
+    isNinoAdy@(is, posNino) = checkAdyNinos ambiente pos
+
+--terminar esta funcion para generar la suciedad en el ambiente creada por los ninos
+generateSuciedadWithNino :: Ambiente -> (Int, Int) -> Ambiente
+generateSuciedadWithNino ambiente@Ambiente {dimetions = (n, m)} pos =
+  let scuare = createSquare pos n m 9
+      countNinos = countNinosInSquare ambiente scuare
+   in ambiente
+
+--cuenta la cantidad de ninos que hay en la cuadricula de 3x3 de centro en la posicion del nino
+countNinosInSquare :: Ambiente -> [(Int, Int)] -> Int
+countNinosInSquare _ [] = 0
+countNinosInSquare ambiente@Ambiente {ninos = ni} square@(s : xs) = if isninosInPos ni s then 1 + countNinosInSquare ambiente xs else countNinosInSquare ambiente xs
+
+myMap :: [(Int, Int)] -> Int -> [((Int, Int), Int)]
+myMap [] _ = []
+myMap (x : xs) d = (x, d) : myMap xs d
+
+isContainInFather :: [((Int, Int), (Int, Int))] -> (Int, Int) -> Bool
+isContainInFather [] _ = False
+isContainInFather ((a, b) : xs) child = (a == child) || isContainInFather xs child
+
+getFather :: [((Int, Int), (Int, Int))] -> (Int, Int) -> (Int, Int)
+getFather [] child = child
+getFather ((c, f) : xs) child = if c == child then f else getFather xs child
+
+--recorrido para encontrar al nino mas sercano (ver si poner que los robots tambien son obstaculos)
+bFSNinos :: Ambiente -> (Int, Int) -> [((Int, Int), Int)] -> [(Int, Int)] -> [((Int, Int), Int)] -> [((Int, Int), (Int, Int))] -> ([((Int, Int), Int)], [((Int, Int), (Int, Int))])
+bFSNinos _ _ [] _ dist father = (dist, father)
+bFSNinos _ _ _ _ [] _ = ([], [])
+bFSNinos ambiente@Ambiente {obstaculos = obs, dimetions = (n, m), ninos = ni, corral = cor, robots = rob} initpos pila@((p, d) : ps) visit dist father
+  | isContain visit p || isobstaculoInPos obs p || (isRobotInPos rob p && p /= initpos) = bFSNinos ambiente initpos ps visit dist father
+  | isninosInPos ni p && not (isContain (adyacentesPosToSquare initpos) p) && not (isNinosInCorral ambiente p) && not (isRobotInCorral ambiente p) = ((p, d) : dist, father)
+  | isninosInPos ni p && isContain (adyacentesPosToSquare initpos) p = bFSNinos ambiente initpos ps visit dist father
+  | otherwise = bFSNinos ambiente initpos (ps ++ myMap ([h | h <- adyacentesPosToSquare p, isValidPos h n m]) (d + 1)) (p : visit) ((p, d) : dist) (father ++ [(f, p) | f <- adyacentesPosToSquare p, isValidPos f n m, not (isContainInFather father f)])
+
+--recorrido para encontrar al corral
+bFSCorral :: Ambiente -> (Int, Int) -> [((Int, Int), Int)] -> [(Int, Int)] -> [((Int, Int), Int)] -> [((Int, Int), (Int, Int))] -> ([((Int, Int), Int)], [((Int, Int), (Int, Int))])
+bFSCorral _ _ [] _ dist father = (dist, father)
+bFSCorral _ _ _ _ [] _ = ([], [])
+bFSCorral ambiente@Ambiente {suciedad = suc, dimetions = (n, m), corral = cor, robots = rob, ninos = ni, obstaculos = obs} initPos pila@((p, d) : ps) visit dist father
+  | isContain visit p || (isRobotInPos rob p && p /= initPos) || isninosInPos ni p || isobstaculoInPos obs p = bFSCorral ambiente initPos ps visit dist father
+  | otherwise = bFSCorral ambiente initPos (ps ++ myMap ([h | h <- adyacentesPosToSquare p, isValidPos h n m]) (d + 1)) (p : visit) ((p, d) : dist) (father ++ [(f, p) | f <- adyacentesPosToSquare p, isValidPos f n m, not (isContainInFather father f)])
+
+--retorna el caminno para llegar de una posicion a otra
+getPathVisit :: (Int, Int) -> (Int, Int) -> [((Int, Int), (Int, Int))] -> [(Int, Int)]
+getPathVisit posInit posEnd fathers = if posInit == posEnd then [posInit] else let p = getFather fathers posEnd in posEnd : getPathVisit posInit p fathers
+
+getPath :: (Int, Int) -> (Int, Int) -> [((Int, Int), (Int, Int))] -> [(Int, Int)]
+getPath posInit posEnd fathers = reverse (getPathVisit posInit posEnd fathers)
+
+--selecciona la posicion que mas me acerca aun nino
+selectMovtoNino :: Ambiente -> (Int, Int) -> (Int, Int)
+selectMovtoNino ambiente@Ambiente {robots = Robot rob} posRobot =
+  let dist@(d, f) = bFSNinos ambiente posRobot [(posRobot, 0)] [] [(posRobot, 0)] []
+      pat = getPath posRobot (fst (head d)) f
+   in pat !! 1
+
+selectMovtoCorral :: Ambiente -> (Int, Int) -> Ambiente
+selectMovtoCorral ambiente@Ambiente {corral = Corral cor, dimetions = (n, m)} posRobot =
+  let dist@(d, f) = bFSCorral ambiente posRobot [(posRobot, 0)] [] [(posRobot, 0)] []
+      posToMov = selectMovtoCorralVisit ambiente d cor (n * m + 1) (-1, -1)
+      distToMidelRobot = getsecondElement d (-1) posRobot
+      distToMidelPosToMov = getsecondElement d (-1) posToMov
+   in if posToMov == (-1, -1)
+        then ambiente
+        else
+          if distToMidelRobot == distToMidelPosToMov && iscorralInPos (Corral cor) posRobot
+            then sueltaNino ambiente posRobot
+            else moveRobotToCorral ambiente posRobot posToMov f
+
+sueltaNino :: Ambiente -> (Int, Int) -> Ambiente
+sueltaNino ambiente@Ambiente {ninos = Ninos ni, robotChargeNino = rcn, obstaculos = obs, suciedad = suc, corral = cor, dimetions = dim, robots = rob, posMidelCorral = posM} pos = Ambiente {ninos = Ninos (pos : ni), obstaculos = obs, suciedad = suc, corral = cor, dimetions = dim, robots = rob, posMidelCorral = posM, robotChargeNino = newRobotChargeNino}
+  where
+    newRobotChargeNino = update rcn (pos, True) (pos, False)
+
+moveRobotToCorral :: Ambiente -> (Int, Int) -> (Int, Int) -> [((Int, Int), (Int, Int))] -> Ambiente
+moveRobotToCorral ambiente@Ambiente {ninos = ni, robotChargeNino = rcn, obstaculos = obs, suciedad = suc, corral = cor, dimetions = dim, robots = Robot rob, posMidelCorral = posM} posInit posEnd fathers =
+  let path = getPath posInit posEnd fathers
+   in if length path > 2
+        then
+          let toMov = path !! 2
+           in Ambiente {robots = Robot (update rob posInit toMov), ninos = ni, obstaculos = obs, suciedad = suc, corral = cor, dimetions = dim, robotChargeNino = update rcn (posInit, True) (toMov, True), posMidelCorral = posM}
+        else
+          let toMov = path !! 1
+           in Ambiente {robots = Robot (update rob posInit toMov), ninos = ni, obstaculos = obs, suciedad = suc, corral = cor, dimetions = dim, robotChargeNino = update rcn (posInit, True) (toMov, True), posMidelCorral = posM}
+
+--selecciona la posicion en el corral mas cercana al centro que puede albergar un nino
+selectMovtoCorralVisit :: Ambiente -> [((Int, Int), Int)] -> [(Int, Int)] -> Int -> (Int, Int) -> (Int, Int)
+selectMovtoCorralVisit _ _ [] _ bestPos = bestPos
+selectMovtoCorralVisit ambiente@Ambiente {posMidelCorral = posM} dists corral@(x : xs) bestDist bestPos
+  | isNinosInCorral ambiente x = selectMovtoCorralVisit ambiente dists xs bestDist bestPos
+  | (distToPosCorral /= -1) && (distToMidel /= -1) && diferense < bestDist = selectMovtoCorralVisit ambiente dists xs diferense x
+  | otherwise = selectMovtoCorralVisit ambiente dists xs bestDist bestPos
+  where
+    (distToMidel, distToPosCorral, diferense) = (getsecondElement dists (-1) posM, getsecondElement dists (-1) x, abs (distToMidel - distToPosCorral))
+
+checkAdyNinos :: Ambiente -> (Int, Int) -> (Bool, (Int, Int))
+checkAdyNinos ambiente@Ambiente {dimetions = (n, m), ninos = ni} pos =
+  let ady = [p | p <- adyacentesPosToSquare pos, isValidPos p n m, isninosInPos ni p, not (isNinosInCorral ambiente p)]
+   in if null ady then (False, (-1, -1)) else (True, head ady)
+
+cargaNino :: Ambiente -> (Int, Int) -> (Int, Int) -> Ambiente
+cargaNino ambiente@Ambiente {ninos = Ninos ni, robotChargeNino = rcn, obstaculos = obs, suciedad = suc, corral = cor, dimetions = dim, robots = rob, posMidelCorral = posM} posNino posRobot =
+  let newNinos = remove ni posNino
+      newRobotChargeNino = update rcn (posRobot, False) (posRobot, True)
+   in Ambiente {ninos = Ninos newNinos, robotChargeNino = newRobotChargeNino, obstaculos = obs, suciedad = suc, corral = cor, dimetions = dim, robots = rob, posMidelCorral = posM}
+
+testSelectMovToCorral :: Ambiente -> ([((Int, Int), Int)], [((Int, Int), (Int, Int))])
+testSelectMovToCorral ambiente@Ambiente {robots = Robot rob, corral = Corral cor, dimetions = (n, m)} = let dist@(d, f) = bFSCorral ambiente (head rob) [(head rob, 0)] [] [(head rob, 0)] [] in dist --selectMovtoCorralVisit ambiente d cor (n * m + 1) (-1, -1)
