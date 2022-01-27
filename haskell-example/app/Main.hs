@@ -18,7 +18,7 @@ main = do
   simulate amb 1000 10 0
 
 --Simualar el movimiento del ambiente
-simulate :: Ambiente -> Int -> Int ->Int -> IO ()
+simulate :: Ambiente -> Int -> Int -> Int -> IO ()
 simulate ambiente 0 _ _ = print ambiente
 simulate ambiente c t at = do
   g <- newStdGen
