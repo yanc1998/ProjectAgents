@@ -5,7 +5,7 @@ module Elementos.Obstaculo
   )
 where
 
-import Utils (adyacentesPos, isContain)
+import Utils (isContain, adyacentesPosToSquare)
 
 data Obstaculo = Obstaculo
   { valor :: [(Int, Int)]
@@ -18,4 +18,4 @@ isobstaculoInPos = isContain . valor
 movListObst :: [(Int, Int)] -> [(Int, Int)] -> Int -> [(Int, Int)]
 movListObst obs [] _ = obs
 movListObst [] _ _ = []
-movListObst (x : xs) toMov dir = if isContain toMov x then adyacentesPos x !! dir : movListObst xs toMov dir else x : movListObst xs toMov dir
+movListObst (x : xs) toMov dir = if isContain toMov x then adyacentesPosToSquare x !! dir : movListObst xs toMov dir else x : movListObst xs toMov dir

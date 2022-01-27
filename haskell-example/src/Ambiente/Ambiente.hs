@@ -7,6 +7,7 @@ module Ambiente.Ambiente
     robotAgent,
     testSelectMovToCorral,
     testSekctMovToNino,
+    changeAmbiente,
     Ambiente (..),
     Ninos (..),
     Suciedad (..),
@@ -109,6 +110,25 @@ updateChildren ambiente@Ambiente {ninos = Ninos ni, obstaculos = obs} pos1 pos2 
   if not (isNinosInCorral ambiente pos1) && (isEmpty ambiente pos2 || isobstaculoInPos obs pos2)
     then updateChildren2 ni pos1 pos2
     else ni
+
+changeAmbiente :: Ambiente -> StdGen -> StdGen -> Ambiente
+changeAmbiente ambiente@Ambiente {dimetions = (n, m), corral = Corral cor, ninos = Ninos ni, robots = Robot rob, suciedad = Suciedad suc, obstaculos = Obstaculo obs, robotChargeNino = rcn} gen1 gen2 =
+  let posX = randomNumber (n -1) gen1
+      posY = randomNumber (m -1) gen2
+      ambCorral = generateCorral n m (head posX, head posY) (length cor)
+      ambNinos = generateNinos ambCorral posX posY (length ni)
+      ambRobot = generateRobots ambNinos posX posY (length rob)
+      ambSuciedad = generateSuciedad ambRobot posX posY (length suc)
+      ambObst = generateObs ambSuciedad posX posY (length obs)
+   in addAmbRobotsChargeNinos ambObst rcn
+
+addAmbRobotsChargeNinos :: Ambiente -> [((Int, Int), Bool)] -> Ambiente
+addAmbRobotsChargeNinos ambiente@Ambiente {dimetions = dim, corral = cor, ninos = ni, robots = Robot rob, suciedad = suc, obstaculos = obs, posMidelCorral = posM} robtsCharNinos = Ambiente {robotChargeNino = addToAmbNinosUpRobot robtsCharNinos rob, dimetions = dim, corral = cor, ninos = ni, robots = Robot rob, suciedad = suc, obstaculos = obs, posMidelCorral = posM}
+
+addToAmbNinosUpRobot :: [((Int, Int), Bool)] -> [(Int, Int)] -> [((Int, Int), Bool)]
+addToAmbNinosUpRobot [] _ = []
+addToAmbNinosUpRobot _ [] = []
+addToAmbNinosUpRobot robotsCharchNinosOld@((p, is) : xs) robotsNew@(r : rs) = (r, is) : addToAmbNinosUpRobot xs rs
 
 --genera el ambiente donde se realiza la simulacion
 generateAmbiente :: Int -> Int -> Int -> Int -> Int -> Int -> StdGen -> StdGen -> Ambiente
@@ -309,10 +329,11 @@ checkAdyNinos ambiente@Ambiente {dimetions = (n, m), ninos = ni} pos =
    in if null ady then (False, (-1, -1)) else (True, head ady)
 
 cargaNino :: Ambiente -> (Int, Int) -> (Int, Int) -> Ambiente
-cargaNino ambiente@Ambiente {ninos = Ninos ni, robotChargeNino = rcn, obstaculos = obs, suciedad = suc, corral = cor, dimetions = dim, robots = rob, posMidelCorral = posM} posNino posRobot =
+cargaNino ambiente@Ambiente {ninos = Ninos ni, robotChargeNino = rcn, obstaculos = obs, suciedad = suc, corral = cor, dimetions = dim, robots = Robot rob, posMidelCorral = posM} posNino posRobot =
   let newNinos = remove ni posNino
-      newRobotChargeNino = update rcn (posRobot, False) (posRobot, True)
-   in Ambiente {ninos = Ninos newNinos, robotChargeNino = newRobotChargeNino, obstaculos = obs, suciedad = suc, corral = cor, dimetions = dim, robots = rob, posMidelCorral = posM}
+      newRobotChargeNino = update rcn (posRobot, False) (posNino, True)
+      newRobot = update rob posRobot posNino
+   in Ambiente {ninos = Ninos newNinos, robotChargeNino = newRobotChargeNino, obstaculos = obs, suciedad = suc, corral = cor, dimetions = dim, robots = Robot newRobot, posMidelCorral = posM}
 
 clean :: Ambiente -> (Int, Int) -> Ambiente
 clean ambiente@Ambiente {ninos = ni, robotChargeNino = rcn, obstaculos = obs, suciedad = Suciedad suc, corral = cor, dimetions = dim, robots = rob, posMidelCorral = posM} pos =
