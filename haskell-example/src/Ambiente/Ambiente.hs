@@ -4,10 +4,13 @@ module Ambiente.Ambiente
     bFSNinos,
     getPath,
     selectMovtoNino,
-    robotAgent,
+    robotAgentCargaNino,
+    robotAgentClean,
     testSelectMovToCorral,
     testSekctMovToNino,
     changeAmbiente,
+    getSuciedad,
+    calculatePorcentSuciedad,
     Ambiente (..),
     Ninos (..),
     Suciedad (..),
@@ -64,10 +67,16 @@ getAllObstaculosInDirections ambiente@Ambiente {dimetions = (n, m), obstaculos =
     postoMov = adyacentesPosToSquare pos !! dir
 
 --mueve todos los obstaculos a partir de una posicion y una direccion
-movObstaculos :: Ambiente -> (Int, Int) -> Int -> Ambiente
-movObstaculos ambiente@Ambiente {dimetions = (n, m), obstaculos = Obstaculo obs, suciedad = s, corral = c, robots = r, ninos = Ninos ni, robotChargeNino = robN, posMidelCorral = posM} pos dir =
+movObstaculos :: Ambiente -> (Int, Int) -> Int -> StdGen -> Ambiente
+movObstaculos ambiente@Ambiente {dimetions = (n, m), obstaculos = Obstaculo obs, suciedad = Suciedad suc, corral = c, robots = r, ninos = Ninos ni, robotChargeNino = robN, posMidelCorral = posM} pos dir gen =
   if isValidPos nextLast n m && isEmpty ambiente nextLast
-    then Ambiente {dimetions = (n, m), suciedad = s, corral = c, robots = r, ninos = Ninos (updateChildren ambiente pos posfirstObst), obstaculos = Obstaculo movObs, robotChargeNino = robN, posMidelCorral = posM}
+    then --poner aqui que ensucie los ninos
+
+      let newChildren@(ch, is) = updateChildren ambiente pos posfirstObst
+          tempAmb@Ambiente {ninos = ni2} = Ambiente {dimetions = (n, m), suciedad = Suciedad suc, corral = c, robots = r, ninos = Ninos ch, obstaculos = Obstaculo movObs, robotChargeNino = robN, posMidelCorral = posM}
+       in if is
+            then Ambiente {suciedad = Suciedad (suc ++ generateSuciedadWithNino tempAmb pos posfirstObst gen), dimetions = (n, m), corral = c, robots = r, ninos = ni2, obstaculos = Obstaculo movObs, robotChargeNino = robN, posMidelCorral = posM}
+            else Ambiente {suciedad = Suciedad suc, dimetions = (n, m), corral = c, robots = r, ninos = ni2, obstaculos = Obstaculo movObs, robotChargeNino = robN, posMidelCorral = posM}
     else ambiente
   where
     posfirstObst = adyacentesPosToSquare pos !! dir
@@ -78,11 +87,17 @@ movObstaculos ambiente@Ambiente {dimetions = (n, m), obstaculos = Obstaculo obs,
     movObs = movListObst obs allObst dir
 
 --resive un ambiente , la posicion del nino que quiere mover y la direccion en la que quiere moverse y retorna el ambinete moviendo el nino en caso de ser valida la posicion
-movOneChildren :: Ambiente -> (Int, Int) -> Int -> Ambiente
-movOneChildren ambiente@Ambiente {obstaculos = obs, robots = rob, suciedad = suc, corral = corr, dimetions = dim@(n, m), robotChargeNino = robN, posMidelCorral = posM} posChildren dir
+movOneChildren :: Ambiente -> (Int, Int) -> Int -> StdGen -> Ambiente
+movOneChildren ambiente@Ambiente {obstaculos = obs, robots = rob, suciedad = Suciedad suc, corral = corr, dimetions = dim@(n, m), robotChargeNino = robN, posMidelCorral = posM} posChildren dir gen
   | not (isValidPos (adyacentesPosToSquare posChildren !! dir) n m) = ambiente
-  | isValidPos (adyacentesPosToSquare posChildren !! dir) n m && isEmpty ambiente (adyacentesPosToSquare posChildren !! dir) = Ambiente {ninos = Ninos (updateChildren ambiente posChildren (adyacentesPosToSquare posChildren !! dir)), suciedad = suc, robots = rob, obstaculos = obs, dimetions = dim, corral = corr, robotChargeNino = robN, posMidelCorral = posM}
-  | isobstaculoInPos obs (adyacentesPosToSquare posChildren !! dir) = movObstaculos ambiente posChildren dir
+  --poner aqui que ensucie los ninos
+  | isValidPos (adyacentesPosToSquare posChildren !! dir) n m && isEmpty ambiente (adyacentesPosToSquare posChildren !! dir) =
+    let newChildren@(ch, is) = updateChildren ambiente posChildren (adyacentesPosToSquare posChildren !! dir)
+        tempAmb = Ambiente {ninos = Ninos ch, suciedad = Suciedad suc, robots = rob, obstaculos = obs, dimetions = dim, corral = corr, robotChargeNino = robN, posMidelCorral = posM}
+     in if is
+          then Ambiente {suciedad = Suciedad (suc ++ generateSuciedadWithNino tempAmb posChildren (adyacentesPosToSquare posChildren !! dir) gen), ninos = Ninos ch, robots = rob, obstaculos = obs, dimetions = dim, corral = corr, robotChargeNino = robN, posMidelCorral = posM}
+          else Ambiente {suciedad = Suciedad suc, ninos = Ninos ch, robots = rob, obstaculos = obs, dimetions = dim, corral = corr, robotChargeNino = robN, posMidelCorral = posM}
+  | isobstaculoInPos obs (adyacentesPosToSquare posChildren !! dir) = movObstaculos ambiente posChildren dir gen
   | otherwise = ambiente
 
 --resive el ambiente y un generador de numeros aleatorios para generar las direcciones de movimiento de los ninos y si estos deciden moverse o no
@@ -91,25 +106,25 @@ moveAllChildren :: Ambiente -> StdGen -> Ambiente
 moveAllChildren ambiente@Ambiente {ninos = Ninos ni} gen =
   let posis = take (length ni) (randomNumber 7 gen)
       movOrNot = take (length ni) (randomNumber 1 gen)
-   in moveAllChildren1 ambiente posis movOrNot ni
+   in moveAllChildren1 ambiente posis movOrNot ni gen
 
 --funcion secundaria para mover los ninos, resive el ambiente las direcciones del movimiento y si estos se moveran o no,
 -- y la lista de los ninos a mover y retorna el ambiente con los movimientos realizados
-moveAllChildren1 :: Ambiente -> [Int] -> [Int] -> [(Int, Int)] -> Ambiente
-moveAllChildren1 ambiente [] _ _ = ambiente
-moveAllChildren1 ambiente _ [] _ = ambiente
-moveAllChildren1 ambiente _ _ [] = ambiente
-moveAllChildren1 ambiente (x : xs) (z : zs) (y : ys) =
+moveAllChildren1 :: Ambiente -> [Int] -> [Int] -> [(Int, Int)] -> StdGen -> Ambiente
+moveAllChildren1 ambiente [] _ _ _ = ambiente
+moveAllChildren1 ambiente _ [] _ _ = ambiente
+moveAllChildren1 ambiente _ _ [] _ = ambiente
+moveAllChildren1 ambiente (x : xs) (z : zs) (y : ys) gen =
   if z == 1
-    then moveAllChildren1 (movOneChildren ambiente y x) xs zs ys
-    else moveAllChildren1 ambiente xs zs ys
+    then moveAllChildren1 (movOneChildren ambiente y x gen) xs zs ys gen
+    else moveAllChildren1 ambiente xs zs ys gen
 
 --cambia la posicion de un nino por la nueva posicion, en caso de que este pueda moverse
-updateChildren :: Ambiente -> (Int, Int) -> (Int, Int) -> [(Int, Int)]
+updateChildren :: Ambiente -> (Int, Int) -> (Int, Int) -> ([(Int, Int)], Bool)
 updateChildren ambiente@Ambiente {ninos = Ninos ni, obstaculos = obs} pos1 pos2 =
   if not (isNinosInCorral ambiente pos1) && (isEmpty ambiente pos2 || isobstaculoInPos obs pos2)
-    then updateChildren2 ni pos1 pos2
-    else ni
+    then (updateChildren2 ni pos1 pos2, True)
+    else (ni, False)
 
 changeAmbiente :: Ambiente -> StdGen -> StdGen -> Ambiente
 changeAmbiente ambiente@Ambiente {dimetions = (n, m), corral = Corral cor, ninos = Ninos ni, robots = Robot rob, suciedad = Suciedad suc, obstaculos = Obstaculo obs, robotChargeNino = rcn} gen1 gen2 =
@@ -187,12 +202,21 @@ generateRobots ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = Robot r
     then generateRobots Ambiente {ninos = ni, obstaculos = obs, robots = Robot ((x, y) : rob), suciedad = suc, corral = cor, dimetions = (n, m), robotChargeNino = ((x, y), False) : robN, posMidelCorral = posM} xs ys (c -1)
     else generateRobots ambiente xs ys c
 
-robotAgent :: Ambiente -> Ambiente
-robotAgent ambiente@Ambiente {robots = Robot r} = moveAllRobotAgent ambiente r
+--agente que carga primero a los ninos
+robotAgentCargaNino :: Ambiente -> Ambiente
+robotAgentCargaNino ambiente@Ambiente {robots = Robot r} = moveAllRobotAgentCragaNinos ambiente r
 
-moveAllRobotAgent :: Ambiente -> [(Int, Int)] -> Ambiente
-moveAllRobotAgent ambiente [] = ambiente
-moveAllRobotAgent ambiente robots@(r : rs) = moveAllRobotAgent (moveOneRobotAgent ambiente r) rs
+--agente que limpia primero
+robotAgentClean :: Ambiente -> Ambiente
+robotAgentClean ambiente@Ambiente {robots = Robot r} = moveAllRobotAgentClean ambiente r
+
+moveAllRobotAgentCragaNinos :: Ambiente -> [(Int, Int)] -> Ambiente
+moveAllRobotAgentCragaNinos ambiente [] = ambiente
+moveAllRobotAgentCragaNinos ambiente robots@(r : rs) = moveAllRobotAgentCragaNinos (moveOneRobotAgent ambiente r) rs
+
+moveAllRobotAgentClean :: Ambiente -> [(Int, Int)] -> Ambiente
+moveAllRobotAgentClean ambiente [] = ambiente
+moveAllRobotAgentClean ambiente robots@(r : rs) = moveAllRobotAgentClean (moveOneRobotAgent1 ambiente r) rs
 
 --arreglar esto ,hacer el agente,estoy haciendo el bfs para saber para que direccion moverme
 moveOneRobotAgent :: Ambiente -> (Int, Int) -> Ambiente
@@ -212,17 +236,55 @@ moveOneRobotAgent ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = Robo
   where
     isNinoAdy@(is, posNino) = checkAdyNinos ambiente pos
 
+--arreglar esto ,hacer el agente,estoy haciendo el bfs para saber para que direccion moverme
+moveOneRobotAgent1 :: Ambiente -> (Int, Int) -> Ambiente
+moveOneRobotAgent1 ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = Robot rob, suciedad = Suciedad suc, corral = cor, dimetions = dim, robotChargeNino = robN, posMidelCorral = posM} pos
+  | issuciedadInPos (Suciedad suc) pos = clean ambiente pos --poner que la recoja
+  | isNinoUpRobot ambiente pos = selectMovtoCorral ambiente pos
+  | is && not (isNinosInCorral ambiente posNino) && not (isNinosInCorral ambiente pos) = cargaNino ambiente posNino pos --si hay una nino alcanzable cojelo
+  | length suc > 0 = selectMovToSuciedad ambiente pos
+  | not (isNinoUpRobot ambiente pos) && existFreeNino ambiente --si no hay un nino alzanzable ni ensima del robot busca el nino mas sercano(falta poner si existe algun nino a buscar)
+    =
+    let toMov = selectMovtoNino ambiente pos --seleccionar la mejor posicion a moverse
+        robotNewPos = update rob pos toMov --mover el robot
+        es = getsecondElement robN False pos --buscar el estado del robot(si hay alguien ensima de el)
+        newRobotChargeNino = update robN (pos, es) (toMov, es) --cambiar la posicion del robot en la lista de si tiene a alguien arriba
+     in Ambiente {ninos = ni, robots = Robot robotNewPos, obstaculos = obs, suciedad = Suciedad suc, dimetions = dim, robotChargeNino = newRobotChargeNino, corral = cor, posMidelCorral = posM}
+  | otherwise = ambiente --poner para que busque la basura mas cercana
+  where
+    isNinoAdy@(is, posNino) = checkAdyNinos ambiente pos
+
 --terminar esta funcion para generar la suciedad en el ambiente creada por los ninos
-generateSuciedadWithNino :: Ambiente -> (Int, Int) -> Ambiente
-generateSuciedadWithNino ambiente@Ambiente {dimetions = (n, m)} pos =
-  let scuare = createSquare pos n m 9
-      countNinos = countNinosInSquare ambiente scuare
-   in ambiente
+generateSuciedadWithNino :: Ambiente -> (Int, Int) -> (Int, Int) -> StdGen -> [(Int, Int)]
+generateSuciedadWithNino ambiente@Ambiente {dimetions = (n, m), corral = cor} pos posToMov gen =
+  let scuare = [a | a <- adyacentesPosToSquare pos, isValidPos a n m, not (iscorralInPos cor a)] --cuadra
+      countNinos = countNinosInSquare ambiente scuare -1 --cantidad de ninos en la cuadricula de 3x3
+      emptyPos = getEmptyPosInSquare ambiente scuare --casillas vacias en la cuadricuala de 3x3
+      cantToEnsuciar = getCantSuciedadGenerate countNinos gen --cantidad de casillas que van ha ser ensuciadas
+   in ensusiarPosEmpty emptyPos cantToEnsuciar gen
 
 --cuenta la cantidad de ninos que hay en la cuadricula de 3x3 de centro en la posicion del nino
 countNinosInSquare :: Ambiente -> [(Int, Int)] -> Int
 countNinosInSquare _ [] = 0
-countNinosInSquare ambiente@Ambiente {ninos = ni} square@(s : xs) = if isninosInPos ni s then 1 + countNinosInSquare ambiente xs else countNinosInSquare ambiente xs
+countNinosInSquare ambiente@Ambiente {ninos = ni, corral = cor} square@(s : xs) = if isninosInPos ni s && not (iscorralInPos cor s) then 1 + countNinosInSquare ambiente xs else countNinosInSquare ambiente xs
+
+getEmptyPosInSquare :: Ambiente -> [(Int, Int)] -> [(Int, Int)]
+getEmptyPosInSquare _ [] = []
+getEmptyPosInSquare ambiente square@(p : ps) = if isEmpty ambiente p then p : getEmptyPosInSquare ambiente ps else getEmptyPosInSquare ambiente ps
+
+getCantSuciedadGenerate :: Int -> StdGen -> Int
+getCantSuciedadGenerate cantNinos gen
+  | cantNinos == 0 = head (randomNumber 1 gen)
+  | cantNinos == 1 = head (randomNumber 2 gen)
+  | otherwise = head (randomNumber 6 gen)
+
+ensusiarPosEmpty :: [(Int, Int)] -> Int -> StdGen -> [(Int, Int)]
+ensusiarPosEmpty [] _ _ = []
+ensusiarPosEmpty _ 0 _ = []
+ensusiarPosEmpty emptyPos cantToEnsuciar gen =
+  let pos = head (randomNumber (length emptyPos -1) gen)
+      dirtyPos = emptyPos !! pos
+   in dirtyPos : ensusiarPosEmpty (remove emptyPos dirtyPos) (cantToEnsuciar -1) gen
 
 myMap :: [(Int, Int)] -> Int -> [((Int, Int), Int)]
 myMap [] _ = []
@@ -345,3 +407,24 @@ testSelectMovToCorral ambiente@Ambiente {robots = Robot rob, corral = Corral cor
 
 testSekctMovToNino :: Ambiente -> ((Int, Int), Int)
 testSekctMovToNino ambiente@Ambiente {robots = Robot rob, corral = Corral cor, dimetions = (n, m)} = let dist@(d, f) = bFSCorral ambiente (head rob) [(head rob, 0)] [] [(head rob, 0)] [] in selectMovtoCorralVisit ambiente d cor (n * m + 1) (-1, -1)
+
+getSuciedad :: Ambiente -> Int
+getSuciedad ambiente@Ambiente {suciedad = Suciedad suc} = length suc
+
+calculateTotalPosibleSuciedad :: Ambiente -> Int
+calculateTotalPosibleSuciedad ambiente@Ambiente {dimetions = (n, m), obstaculos = Obstaculo obs, ninos = Ninos ni, robots = Robot rob} =
+  let total = n * m
+      cantObs = length obs
+      repNinos = countRepNinos ambiente ni
+      cantAgents = length rob
+   in total - cantObs - repNinos - cantAgents
+
+countRepNinos :: Ambiente -> [(Int, Int)] -> Int
+countRepNinos _ [] = 0
+countRepNinos ambiente ninos@(n : ns) = if isNinosInCorral ambiente n then 1 + countRepNinos ambiente ns else 2 + countRepNinos ambiente ns
+
+calculatePorcentSuciedad :: Ambiente -> Double
+calculatePorcentSuciedad ambiente@Ambiente {suciedad = Suciedad suc} =
+  let total = calculateTotalPosibleSuciedad ambiente
+      cantSuciedad = length suc
+   in realToFrac (cantSuciedad * 100) / realToFrac total
