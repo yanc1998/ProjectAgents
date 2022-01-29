@@ -218,7 +218,7 @@ moveAllRobotAgentClean :: Ambiente -> [(Int, Int)] -> Ambiente
 moveAllRobotAgentClean ambiente [] = ambiente
 moveAllRobotAgentClean ambiente robots@(r : rs) = moveAllRobotAgentClean (moveOneRobotAgent1 ambiente r) rs
 
---arreglar esto ,hacer el agente,estoy haciendo el bfs para saber para que direccion moverme
+--mover el robot que se encarga de recoger primero los ninos
 moveOneRobotAgent :: Ambiente -> (Int, Int) -> Ambiente
 moveOneRobotAgent ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = Robot rob, suciedad = Suciedad suc, corral = cor, dimetions = dim, robotChargeNino = robN, posMidelCorral = posM} pos
   | issuciedadInPos (Suciedad suc) pos = clean ambiente pos --poner que la recoja
@@ -236,7 +236,7 @@ moveOneRobotAgent ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = Robo
   where
     isNinoAdy@(is, posNino) = checkAdyNinos ambiente pos
 
---arreglar esto ,hacer el agente,estoy haciendo el bfs para saber para que direccion moverme
+--mover el robot que se encarga de recoger primero la basura
 moveOneRobotAgent1 :: Ambiente -> (Int, Int) -> Ambiente
 moveOneRobotAgent1 ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = Robot rob, suciedad = Suciedad suc, corral = cor, dimetions = dim, robotChargeNino = robN, posMidelCorral = posM} pos
   | issuciedadInPos (Suciedad suc) pos = clean ambiente pos --poner que la recoja
@@ -416,12 +416,16 @@ calculateTotalPosibleSuciedad ambiente@Ambiente {dimetions = (n, m), obstaculos 
   let total = n * m
       cantObs = length obs
       repNinos = countRepNinos ambiente ni
-      cantAgents = length rob
+      cantAgents = countRepRobot ambiente rob
    in total - cantObs - repNinos - cantAgents
 
 countRepNinos :: Ambiente -> [(Int, Int)] -> Int
 countRepNinos _ [] = 0
 countRepNinos ambiente ninos@(n : ns) = if isNinosInCorral ambiente n then 1 + countRepNinos ambiente ns else 2 + countRepNinos ambiente ns
+
+countRepRobot :: Ambiente -> [(Int, Int)] -> Int
+countRepRobot _ [] = 0
+countRepRobot ambiente robots@(r : rs) = if isRobotInCorral ambiente r then countRepNinos ambiente rs else 1 + countRepRobot ambiente rs
 
 calculatePorcentSuciedad :: Ambiente -> Double
 calculatePorcentSuciedad ambiente@Ambiente {suciedad = Suciedad suc} =
