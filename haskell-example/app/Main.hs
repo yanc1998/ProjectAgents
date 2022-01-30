@@ -6,15 +6,69 @@ import Utils (adyacentesPos, createSquare, randomNumber)
 
 main :: IO ()
 main = do
+  
+  -- ///// ambiente 10x10 7ninos 5obstaculos 5basuras////
   g1 <- newStdGen
   g2 <- newStdGen
   let amb = generateAmbiente 10 10 7 5 5 1 g1 g2
-  print amb
 
-  print "Start test Carga Ninos"
+  print "Start test1 Carga Ninos t=100"
   testCargaNino amb 30 1000 100
-  print "Start test Clean"
+  print "Start test1 Clean t=100"
   testClean amb 30 1000 100
+
+  print "Start test1 Carga Ninos t=50"
+  testCargaNino amb 30 1000 50
+  print "Start test1 Clean t=50"
+  testClean amb 30 1000 50
+
+  print "Start test1 Carga Ninos t=20"
+  testCargaNino amb 30 1000 20
+  print "Start test1 Clean t=20"
+  testClean amb 30 1000 20
+  -- ///////////////////////////////////////////////////
+
+  -- ///// ambiente 10x10 7ninos 10obstaculos 10basuras////
+  g1 <- newStdGen
+  g2 <- newStdGen
+  let amb1 = generateAmbiente 10 10 7 10 10 1 g1 g2
+  
+  print "Start test2 Carga Ninos t=100"
+  testCargaNino amb1 30 1000 100
+  print "Start test2 Clean t=100"
+  testClean amb1 30 1000 100
+
+  print "Start test2 Carga Ninos t=50"
+  testCargaNino amb1 30 1000 50
+  print "Start test2 Clean t=50"
+  testClean amb1 30 1000 50
+
+  print "Start test2 Carga Ninos t=20"
+  testCargaNino amb1 30 1000 20
+  print "Start test2 Clean t=20"
+  testClean amb1 30 1000 20
+  -- ///////////////////////////////////////////////////
+
+  -- ///// ambiente 10x10 7ninos 10obstaculos 10basuras////
+  g1 <- newStdGen
+  g2 <- newStdGen
+  let amb2 = generateAmbiente 10 10 10 20 20 1 g1 g2
+  
+  print "Start test3 Carga Ninos t=100"
+  testCargaNino amb2 30 1000 100
+  print "Start test3 Clean t=100"
+  testClean amb2 30 1000 100
+
+  print "Start test3 Carga Ninos t=50"
+  testCargaNino amb2 30 1000 50
+  print "Start test3 Clean t=50"
+  testClean amb2 30 1000 50
+
+  print "Start test3 Carga Ninos t=20"
+  testCargaNino amb2 30 1000 20
+  print "Start test3 Clean t=20"
+  testClean amb2 30 1000 20
+  -- ///////////////////////////////////////////////////
 
 --Simualar el movimiento del ambiente para el agente que primero carga el nino
 simulateCargaNino :: Ambiente -> Int -> Int -> Int -> IO ()
@@ -24,11 +78,15 @@ simulateCargaNino ambiente c t at = do
 
   -- ////movimiento del agente///////////////////
   let ambToRobot = robotAgentCargaNino ambiente
+  --print ambToRobot
   -- ////////////////////////////////////////////
 
   -- ///movimiento de los ninos//////////////////
   g <- newStdGen
+  
   let newAmb = moveAllChildren ambToRobot g
+  --print newAmb
+  
   -- ////////////////////////////////////////////
 
   -- ///// turno de cambiar el ambiente //////////
@@ -64,7 +122,7 @@ testCargaNino :: Ambiente -> Int -> Int -> Int -> IO ()
 testCargaNino _ 0 n t = print "finish"
 testCargaNino ambiente c n t = do
   simulateCargaNino ambiente n t 0
-  testClean ambiente (c -1) n t
+  testCargaNino ambiente (c -1) n t
 
 testClean :: Ambiente -> Int -> Int -> Int -> IO ()
 testClean _ 0 n t = print "finish"

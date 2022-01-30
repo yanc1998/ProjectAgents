@@ -227,10 +227,13 @@ moveOneRobotAgent ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = Robo
   | not (isNinoUpRobot ambiente pos) && existFreeNino ambiente --si no hay un nino alzanzable ni ensima del robot busca el nino mas sercano(falta poner si existe algun nino a buscar)
     =
     let toMov = selectMovtoNino ambiente pos --seleccionar la mejor posicion a moverse
-        robotNewPos = update rob pos toMov --mover el robot
-        es = getsecondElement robN False pos --buscar el estado del robot(si hay alguien ensima de el)
-        newRobotChargeNino = update robN (pos, es) (toMov, es) --cambiar la posicion del robot en la lista de si tiene a alguien arriba
-     in Ambiente {ninos = ni, robots = Robot robotNewPos, obstaculos = obs, suciedad = Suciedad suc, dimetions = dim, robotChargeNino = newRobotChargeNino, corral = cor, posMidelCorral = posM}
+     in if toMov /= (-1, -1)
+          then
+            let robotNewPos = update rob pos toMov --mover el robot
+                es = getsecondElement robN False pos --buscar el estado del robot(si hay alguien ensima de el)
+                newRobotChargeNino = update robN (pos, es) (toMov, es) --cambiar la posicion del robot en la lista de si tiene a alguien arriba
+             in Ambiente {ninos = ni, robots = Robot robotNewPos, obstaculos = obs, suciedad = Suciedad suc, dimetions = dim, robotChargeNino = newRobotChargeNino, corral = cor, posMidelCorral = posM}
+          else ambiente
   | length suc > 0 = selectMovToSuciedad ambiente pos
   | otherwise = ambiente --poner para que busque la basura mas cercana
   where
@@ -246,10 +249,13 @@ moveOneRobotAgent1 ambiente@Ambiente {ninos = ni, obstaculos = obs, robots = Rob
   | not (isNinoUpRobot ambiente pos) && existFreeNino ambiente --si no hay un nino alzanzable ni ensima del robot busca el nino mas sercano(falta poner si existe algun nino a buscar)
     =
     let toMov = selectMovtoNino ambiente pos --seleccionar la mejor posicion a moverse
-        robotNewPos = update rob pos toMov --mover el robot
-        es = getsecondElement robN False pos --buscar el estado del robot(si hay alguien ensima de el)
-        newRobotChargeNino = update robN (pos, es) (toMov, es) --cambiar la posicion del robot en la lista de si tiene a alguien arriba
-     in Ambiente {ninos = ni, robots = Robot robotNewPos, obstaculos = obs, suciedad = Suciedad suc, dimetions = dim, robotChargeNino = newRobotChargeNino, corral = cor, posMidelCorral = posM}
+     in if toMov /= (-1, -1)
+          then
+            let robotNewPos = update rob pos toMov --mover el robot
+                es = getsecondElement robN False pos --buscar el estado del robot(si hay alguien ensima de el)
+                newRobotChargeNino = update robN (pos, es) (toMov, es) --cambiar la posicion del robot en la lista de si tiene a alguien arriba
+             in Ambiente {ninos = ni, robots = Robot robotNewPos, obstaculos = obs, suciedad = Suciedad suc, dimetions = dim, robotChargeNino = newRobotChargeNino, corral = cor, posMidelCorral = posM}
+          else ambiente
   | otherwise = ambiente --poner para que busque la basura mas cercana
   where
     isNinoAdy@(is, posNino) = checkAdyNinos ambiente pos
@@ -337,7 +343,7 @@ selectMovtoNino :: Ambiente -> (Int, Int) -> (Int, Int)
 selectMovtoNino ambiente@Ambiente {robots = Robot rob} posRobot =
   let dist@(d, f) = bFSNinos ambiente posRobot [(posRobot, 0)] [] [(posRobot, 0)] []
       pat = getPath posRobot (fst (head d)) f
-   in pat !! 1
+   in if length pat > 1 then pat !! 1 else (-1, -1)
 
 --selecciona la accion a realizar para llegar al corral o soltar el nino
 selectMovtoCorral :: Ambiente -> (Int, Int) -> Ambiente
