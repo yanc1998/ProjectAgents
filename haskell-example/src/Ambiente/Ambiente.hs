@@ -30,14 +30,14 @@ import Utils (adyacentesPos, adyacentesPosToSquare, createSquare, distance, getf
 
 --ambiente
 data Ambiente = Ambiente
-  { ninos :: Ninos,
-    robots :: Robot,
-    corral :: Corral,
-    suciedad :: Suciedad,
-    obstaculos :: Obstaculo,
-    dimetions :: (Int, Int),
-    robotChargeNino :: [((Int, Int), Bool)],
-    posMidelCorral :: (Int, Int)
+  { ninos :: Ninos,--posiciones que ocupan los ninos en el ambiente
+    robots :: Robot,--posiciones que ocupan los roboces en el ambiente
+    corral :: Corral,--posiciones que ocupa el corral en el ambiente
+    suciedad :: Suciedad,--posiciones que ocupan las suciedades en el ambiente
+    obstaculos :: Obstaculo,--posiciones que ocupan los obstaculos en el ambiente
+    dimetions :: (Int, Int),--dimensiones del ambiente
+    robotChargeNino :: [((Int, Int), Bool)], --para identificar si un robot carga un nino (una ves que un robot carga un nino este es retirado de la lista de ninos)
+    posMidelCorral :: (Int, Int) --posicion del medio del corral
   }
   deriving (Show)
 
