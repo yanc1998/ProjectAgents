@@ -52,7 +52,7 @@ La variación del ambiente ocurre totalmente aleatoria, una vez que ocurre está
 
 ### 4-Simulaciones 
 
-Para las simulaciones se realizaron 3 tipos de ambientes con diferentes parámetros, realizando para cada uno de estos 2 simulaciones con valores del parámetro t distinto (100,50) y con cada uno de los Agentes (CargaNiño,Limpiador),todas las simulaciones fueron realizadas con 1000 turnos.
+Para las simulaciones se realizaron 3 tipos de ambientes con diferentes parámetros, realizando para cada uno de estos 2 ejecuciones con valores del parámetro t distinto (100,50) y con cada uno de los Agentes (CargaNiño,Limpiador), en cada ejecución se realizaron 30 simulaciones, todas las simulaciones fueron realizadas con 1000 turnos,la última fila de la tabla representa la cantidad de veces del total de ejecuciones que el robot no cumple su objetivo, y en las demás filas se encuentra el porciento de suciedad quedado en el ambiente una vez terminada la ejecución.
 
 
 
