@@ -1,70 +1,70 @@
 
 
-## Informe Proyecto de la asignatura de Simulacion y Programcion Declarativa
+## Informe Proyecto de la asignatura de Simulación y Programación Declarativa
 
-Autor: Yan Carlos Gonzalez Blanco C-411
+Autor: Yan Carlos González Blanco C-411
 
 ### 1-Ideas seguidas para la solución del problema
 
-Para la solucion del problema nos basamos en la blibiografia sobre agentes y las conferencias vistas en clase, en las cuales nos apyamos para la modelacion tanto de los agentes como del ambiente, los cuales serán explicado mas adelante con profundidad su funcinamiento.
+Para la solución del problema me basé en la bibliografía sobre agentes y las conferencias vistas en clase, en las cuales me apoyé para la modelación tanto de los agentes como del ambiente, los cuales serán explicados más adelante con profundidad su funcinamiento.
 
 ### 2-Modelos de Agentes
 
-Para los robots de casa se utilizaron dos modelos, los cuales son reactivos diferenciandoses entre estos por la prioridad de sus categorias.
+Para los robots de casa se utilizaron dos modelos, los cuales son reactivos diferenciándoses entre estos por la prioridad de sus categorías.
 
 Para el primer agente al cual llamaremos CargaNino se siguieron el siguiente orden de prioridades para su implementación:
 
-1- Si el robot esta parado en una posicion donde se encuentra una suciedad este pasa de forma inmediata a limpiarla.
+1- Si el robot está parado en una posición donde se encuentra una suciedad este pasa de forma inmediata a limpiarla.
 
-2- Si el robot se encuantra cargando un nino y este puede llevarlo hacia el corral se mueve hacia la casilla que mas lo acerque a este.
+2- Si el robot se encuantra cargando un niño y este puede llevarlo hacia el corral se mueve hacia la casilla que mas lo acerque a este.
 
-3- Si el robot no esta cargando a ningun nino y existe un nino al cual el puede llevar hacia el corral, entonces se mueve hacia el nino mas cercano.
+3- Si el robot no está cargando a ningún niño y existe un niño al cual él puede llevar hacia el corral, entonces se mueve hacia el niño más cercano.
 
-4- Si existe basura en el ambiente y el robot puede alcanzar alguna de estas, entonces este se mueve a la casilla que mas lo acerque a esta. 
+4- Si existe basura en el ambiente y el robot puede alcanzar alguna de estas, entonces este se mueve a la casilla que más lo acerque a esta. 
 
 5- Si el robot no puede realizar niniguna de las anteriores se queda en su lugar.
 
-Es decir que la funcion principal de este agente sera tratar de llevar los ninos primero al corral, para de esta forma eliminar la fuente de la suciedad, y mientras lleva a los ninos si en el camino coincide con alguna casilla sucia este pasa a limpiarla. Si ya una vez que todos los ninos se encuentre ubicados en el corral entonces pasaria a eliminar la basura de forma directa.
+Es decir que la función principal de este agente será tratar de llevar los niños primero al corral, para de esta forma eliminar la fuente de la suciedad, y mientras lleva a los niños si en el camino coincide con alguna casilla sucia este pasa a limpiarla. Si ya una vez que todos los niños se encuentre ubicados en el corral entonces pasaría a eliminar la basura de forma directa.
 
 Para el segundo agente al cual llamaremos Limpiador se siguieron de forma similar al anterior el orden de prioridades solamente cambiando la prioridad 3 por la 4.
 
-Este agente funciana contrario del anterior, el cual primero trata de elminar la basura de forma directa y una ves que el ambiente este completamente limpio pasaria a tratar de llevar los ninos al corral.
+Este agente funciana contrario del anterior, el cual primero trata de eliminar la basura de forma directa y una vez que el ambiente este completamente limpio pasaría a tratar de llevar los niños al corral.
 
-Los ninos fueron modeldos realizando el movimiento de forma aleatoria a una de las 8 direcciones posibles de las casillas adyacentes a este.
+Los niños fueron modeldos realizando el movimiento de forma aleatoria a una de las 8 direcciones posibles de las casillas adyacentes a este.
 
 
 
 ### 3-Detalles de la implementación 
 
-Como requisito del proyecto la implementacion fue realizada en el lenguaje de programcion Haskell basado en el paradigma funcional, para la fasiilad de la creacion y ejecucion de este se utilizo la erramienta Stack. Para ejecutar el proyecto es necesario tenerlo instalado, una ves instalado y descargado el proyecto en el directorio de este ejecutar:
+Como requisito del proyecto la implementación fue realizada en el lenguaje de programación Haskell basado en el paradigma funcional, para la faciliad de la creación y ejecución de este se utilizó la herramienta Stack. Para ejecutar el proyecto es necesario tenerlo instalado, una vez instalado, y descargado el proyecto, en el directorio de este ejecutar:
 
 ```bash
 stack build && stack exec haskell-example-exe 
 ```
 
- Una ves corrido se mostrara el resulatado de las simulaciones realizadas.
+ Una vez corrido se mostrará el resulatado de las simulaciones realizadas.
 
-Para la modelacion del ambiente se creo un nuevo tipo de dato llamado Ambiente en el cual se encontraran las dimenciones del corral, una lista de ninos, una de obstáculos, una de suciead, una de los roboces, y una para el corral, para poder identificar las posiciones que ocuparian estos en el ambiente. Para crear el corral se utilizo un algoritmo BFS que para una ves sean llenadas la cantidad de casillas que va ha tener el corral, de esta forma se garantiza que el corral este conectado y se cree de la forma mas cuadrada posible. 
+Para la modelación del ambiente se creó un nuevo tipo de dato llamado Ambiente en el cual se encontrarán las dimensiones del tablero, una lista de niños, una de obstáculos, una de suciedad, una de los roboces, y una para el corral, para poder identificar las posiciones que ocuparían estos en el ambiente. Para crear el corral se utilizó un algoritmo BFS que se detiene una vez sean visitadas la cantidad de casillas que va ha tener el corral, de esta forma se garantiza que el corral este conectado y se cree de la forma más cuadrada posible. 
 
-Para la implementacion de los roboces se utilizo un algoritmo BFS para encontrar tanto los ninos, como la suciedad y el corral que se encuentre mas cerca de este, para garantiza que el robot tenga que moverse lo menos posible para cumplir su objetivo, ya sea de buscar a el nino para llevarlo al corral como ya llevarlo directamente al corral o buscar la suciedad para limpiarla. Para llevar los ninos al corral y poder garantizar que el corral no se cierre y queden posiciones vacias en el interior, el robot trata de llevar al nino a la posicion del corral alcanzable por el, que mas cerca este del centro de este, para grantizar que el corral se valla creando por niveles, hasta que un nivel no sea haya completado no se pase a poner ninos en el otro mas externo.   
+Para la implementación de los roboces se utilizó un algoritmo BFS para encontrar tanto los niños, la suciedad como el corral que se encuentre más cerca de este, para de esta forma garantizar que el robot tenga que moverse lo menos posible para cumplir su objetivo, ya sea de buscar al niño para llevarlo al corral, llevarlo directamente al corral o buscar la suciedad para limpiarla. Para llevar los niños al corral y poder garantizar que el corral no se cierre y queden posiciones vacias en el interior, el robot trata de llevar al niño a la posicion del corral alcanzable por él que más cerca este del centro de este, para grantizar que el corral se valla creando por niveles,es decir, hasta que un nivel no sea haya completado no se pase a poner niños en el otro nivel más externo.   
 
-La variación del ambiente ocurre totalmente aleatoria cambiando todo de lugar, incluyendo el corral y los roboces , manteniedo la cantiad de basura actual en este, y sacando a todos los ninos del corral.  
-
-
+La variación del ambiente ocurre totalmente aleatoria, una vez que ocurre está todo el ambiente cambia,  moviendo todo de lugar, incluyendo el corral y los roboces,  la cantiad de basura que se encontraba antes de la variación se mantiene después de esta, lo que esta es cambiada de lugar. Todos los niños que se encuentren dentro del corral una vez ocurra esta son sacados del corral.
 
 ### 4-Simulaciones 
 
-Para las simulaciones se realizaron 3 tipos de ambientes con diferentes parámetros, realizando para cada uno de estos 3 simulaciones con valores del parámetro t distinto (100,50,20) y con cada uno de los Agentes (CargaNino,Limpiador),todas las simulaciones fueron hechas con 1000 turnos
+Para las simulaciones se realizaron 3 tipos de ambientes con diferentes parámetros, realizando para cada uno de estos 2 simulaciones con valores del parámetro t distinto (100,50) y con cada uno de los Agentes (CargaNiño,Limpiador),todas las simulaciones fueron realizadas con 1000 turnos.
 
 
 
 Datos de la ejecución:
 
-$t = 100,7\ ninos,6\ \% \ suciedad,5\ obstaculos$
+#### Ejecución #1
 
+$7\ niños,5 \ suciedad,5\ obstaculos$
 
+$t=100$
 
-| Craga Nino         | Limpiador          |
+| Craga Niño         | Limpiador          |
 | ------------------ | ------------------ |
 | 25.28735632183908  | 25.0               |
 | 26.436781609195403 | 33.333333333333336 |
@@ -94,12 +94,17 @@ $t = 100,7\ ninos,6\ \% \ suciedad,5\ obstaculos$
 | 10.344827586206897 | 21.59090909090909  |
 | 24.137931034482758 | 39.53488372093023  |
 | 18.39080459770115  | 12.941176470588236 |
-| 6.896551724137931  | 17.441860465116278 |
+| 6.89655172413793   | 17.441860465116278 |
+| 10.44483759620689  | 20.5090909090909   |
 | 0/30               | 0/30               |
 
-T=50
 
-| Carga Nino         | Limpiador          |
+
+$t=50$
+
+
+
+| Carga Niño         | Limpiador          |
 | ------------------ | ------------------ |
 | 53.48837209302326  | 49.397590361445786 |
 | 55.294117647058826 | 57.83132530120482  |
@@ -130,12 +135,20 @@ T=50
 | 60.0               | 50.0               |
 | 57.83132530120482  | 37.34939759036145  |
 | 60.97560975609756  | 51.19047619047619  |
+| 54.284317647058826 | 56.736505025096376 |
 | 7/30               | 2/30               |
 
 
-T=100 7ninos 10 basuras 10 obstáculos
 
-| Carga Nino         | Limpiador          |
+#### Ejecución #2
+
+$ 7 \ niños\ 10\ basuras\ 10\ obstáculos$
+
+$t=100$
+
+
+
+| Carga Niño         | Limpiador          |
 | ------------------ | ------------------ |
 | 19.51219512195122  | 12.048192771084338 |
 | 9.75609756097561   | 22.22222222222222  |
@@ -166,13 +179,14 @@ T=100 7ninos 10 basuras 10 obstáculos
 | 10.975609756097562 | 32.926829268292686 |
 | 9.75609756097561   | 20.73170731707317  |
 | 14.634146341463415 | 19.51219512195122  |
+| 12.314534147341462 | 24.170631707327075 |
 | 0/30               | 0/30               |
 
 
 
-T = 50
+$t = 50$
 
-|                    |                    |
+| CargaNiño          | Limpiador          |
 | ------------------ | ------------------ |
 | 56.09756097560975  | 46.05263157894737  |
 | 60.75949367088607  | 47.43589743589744  |
@@ -203,325 +217,100 @@ T = 50
 | 56.79012345679013  | 45.45454545454545  |
 | 57.5               | 50.63291139240506  |
 | 55.0               | 57.69230769230769  |
+| 47.617848517944712 | 52.63291439340507  |
 | 7/30               | 1/30               |
 
 
 
-Como podemos observar para valores mas pequenos de t el robot encaragdo de primero de llevar los ninos al corrral obtiene peores resultados que el que se encarga primero de limpiar, lo cual es algo logico de la forma en que varia el ambiente ya que el variar este todos los ninos son sacados del corral, por lo que el robot pasara todo el tiempo tratando de llevar a los ninos al corral y estos saliendos por lo que no dedica mucho tiempo a limpiar de forma directa, para valores mas grandes de t el encargado de llevar los ninos primero obtiene mejores resultados ya que este tiene tiempo para llevar los ninos al corral y comenzar a limpiar de forma directa y elimina la fuente de suciedad
+#### Ejecución #3
+
+ $10 \ niños \ 20 \ obstáculos \ 20 \ basuras$ 
+
+$t=100$
+
+| Carga Niño         | Limpiador          |
+| ------------------ | ------------------ |
+| 45.45454545454545  | 30.434782608695652 |
+| 33.80281690140845  | 49.23076923076923  |
+| 41.791044776119406 | 63.07692307692308  |
+| 42.028985507246375 | 38.46153846153846  |
+| 56.71641791044776  | 31.818181818181817 |
+| 48.57142857142857  | 40.298507462686565 |
+| 30.0               | 37.878787878787875 |
+| 41.42857142857143  | 32.83582089552239  |
+| 46.26865671641791  | 40.0               |
+| 42.64705882352941  | 43.93939393939394  |
+| 55.88235294117647  | 26.865671641791046 |
+| 47.142857142857146 | 41.1764705882353   |
+| 37.142857142857146 | 33.333333333333336 |
+| 38.23529411764706  | 41.791044776119406 |
+| 53.73134328358209  | 34.32835820895522  |
+| 45.714285714285715 | 45.588235294117645 |
+| 46.3768115942029   | 31.818181818181817 |
+| 43.47826086956522  | 39.39393939393939  |
+| 26.08695652173913  | 30.76923076923077  |
+| 38.23529411764706  | 30.76923076923077  |
+| 21.73913043478261  | 25.37313432835821  |
+| 30.434782608695652 | 26.865671641791046 |
+| 37.3134328358209   | 53.84615384615385  |
+| 42.64705882352941  | 40.298507462686565 |
+| 57.971014492753625 | 36.76470588235294  |
+| 40.57971014492754  | 39.130434782608695 |
+| 44.285714285714285 | 30.88235294117647  |
+| 52.857142857142854 | 38.80597014925373  |
+| 44.285714285714285 | 40.298507462686565 |
+| 75.38461538461539  | 34.84848484848485  |
+| 1/30               | 1/30               |
 
 
 
-"Start test1 Carga Ninos t=50"
+$t=50$
 
-"finish"
-"Start test1 Clean t=50"
-
-
-
-54.76190476190476
-"finish"
-"Start test1 Carga Ninos t=20"
-65.06024096385542
-70.23809523809524
-71.08433734939759
-73.80952380952381
-75.60975609756098
-71.08433734939759
-67.07317073170732
-68.29268292682927
-70.73170731707317
-74.39024390243902
-72.28915662650603
-76.82926829268293
-76.82926829268293
-74.39024390243902
-69.87951807228916
-74.07407407407408
-76.19047619047619
-69.1358024691358
-74.6987951807229
-66.66666666666667
-71.60493827160494
-68.23529411764706
-71.95121951219512
-65.4320987654321
-74.39024390243902
-79.26829268292683
-70.73170731707317
-67.46987951807229
-66.66666666666667
-65.06024096385542
-"finish"
-"Start test1 Clean t=20"
-52.38095238095238
-66.25
-65.4320987654321
-60.49382716049383
-56.79012345679013
-59.25925925925926
-68.29268292682927
-57.31707317073171
-71.60493827160494
-56.25
-65.47619047619048
-54.8780487804878
-63.41463414634146
-56.79012345679013
-64.63414634146342
-75.60975609756098
-68.29268292682927
-71.25
-68.29268292682927
-68.29268292682927
-62.5
-64.19753086419753
-62.19512195121951
-67.07317073170732
-59.25925925925926
-65.06024096385542
-69.51219512195122
-62.96296296296296
-62.96296296296296
-65.4320987654321
-"finish"
-"Start test2 Carga Ninos t=100"
+| Carga Niño         | Limpiador          |
+| ------------------ | ------------------ |
+| 64.0625            | 66.66666666666667  |
+| 63.492063492063494 | 62.295081967213115 |
+| 61.904761904761905 | 57.377049180327866 |
+| 66.66666666666667  | 58.064516129032256 |
+| 75.0               | 61.29032258064516  |
+| 61.904761904761905 | 63.492063492063494 |
+| 64.17910447761194  | 62.903225806451616 |
+| 66.66666666666667  | 54.83870967741935  |
+| 73.01587301587301  | 66.12903225806451  |
+| 62.5               | 54.83870967741935  |
+| 70.76923076923077  | 64.51612903225806  |
+| 66.15384615384616  | 67.21311475409836  |
+| 73.84615384615384  | 65.07936507936508  |
+| 67.1875            | 63.9344262295082   |
+| 70.3125            | 73.01587301587301  |
+| 66.12903225806451  | 55.73770491803279  |
+| 70.76923076923077  | 57.142857142857146 |
+| 71.875             | 60.65573770491803  |
+| 68.75              | 59.375             |
+| 74.60317460317461  | 64.51612903225806  |
+| 64.61538461538461  | 66.66666666666667  |
+| 66.66666666666667  | 60.0               |
+| 78.125             | 62.903225806451616 |
+| 72.3076923076923   | 72.58064516129032  |
+| 62.5               | 64.51612903225806  |
+| 81.53846153846153  | 53.96825396825397  |
+| 68.18181818181819  | 57.8125            |
+| 72.58064516129032  | 65.57377049180327  |
+| 65.07936507936508  | 63.9344262295082   |
+| 67.1875            | 70.3125            |
+| 30/30              | 21/30              |
 
 
 
-"finish"
-"Start test2 Clean t=100"
-////aasasasaaquiuiui
-"finish"
-"Start test2 Carga Ninos t=50"
-"finish"
-
-"Start test2 Clean t=50"
-"finish"
-"Start test2 Carga Ninos t=20"
-70.88607594936708
-70.12987012987013
-76.3157894736842
-73.6842105263158
-76.3157894736842
-74.02597402597402
-67.0886075949367
-78.2051282051282
-68.35443037974683
-76.3157894736842
-70.0
-66.25
-74.35897435897436
-75.64102564102564
-67.0886075949367
-70.51282051282051
-71.05263157894737
-74.68354430379746
-72.36842105263158
-74.02597402597402
-64.93506493506493
-76.25
-69.62025316455696
-74.02597402597402
-74.68354430379746
-72.72727272727273
-73.41772151898734
-78.2051282051282
-76.62337662337663
-73.07692307692308
-"finish"
-"Start test2 Clean t=20"
-57.89473684210526
-65.78947368421052
-72.72727272727273
-61.8421052631579
-57.142857142857146
-61.03896103896104
-57.142857142857146
-65.33333333333333
-60.526315789473685
-71.05263157894737
-65.38461538461539
-65.38461538461539
-60.526315789473685
-59.74025974025974
-63.63636363636363
-71.05263157894737
-61.53846153846154
-71.7948717948718
-67.10526315789474
-62.33766233766234
-59.21052631578947
-70.12987012987013
-59.74025974025974
-60.526315789473685
-63.1578947368421
-62.666666666666664
-60.256410256410255
-60.526315789473685
-61.8421052631579
-64.47368421052632
-"finish"
-"Start test3 Carga Ninos t=100"
-45.45454545454545
-33.80281690140845
-41.791044776119406
-42.028985507246375
-56.71641791044776
-48.57142857142857
-30.0
-41.42857142857143
-46.26865671641791
-42.64705882352941
-55.88235294117647
-47.142857142857146
-37.142857142857146
-38.23529411764706
-53.73134328358209
-45.714285714285715
-46.3768115942029
-43.47826086956522
-26.08695652173913
-38.23529411764706
-21.73913043478261
-30.434782608695652
-37.3134328358209
-42.64705882352941
-57.971014492753625
-40.57971014492754
-44.285714285714285
-52.857142857142854
-44.285714285714285
-75.38461538461539
-"finish"
-"Start test3 Clean t=100"
-30.434782608695652
-49.23076923076923
-63.07692307692308
-38.46153846153846
-31.818181818181817
-40.298507462686565
-37.878787878787875
-32.83582089552239
-40.0
-43.93939393939394
-26.865671641791046
-41.1764705882353
-33.333333333333336
-41.791044776119406
-34.32835820895522
-45.588235294117645
-31.818181818181817
-39.39393939393939
-30.76923076923077
-30.76923076923077
-25.37313432835821
-26.865671641791046
-53.84615384615385
-40.298507462686565
-36.76470588235294
-39.130434782608695
-30.88235294117647
-38.80597014925373
-40.298507462686565
-34.84848484848485
-"finish"
-"Start test3 Carga Ninos t=50"
-64.0625
-63.492063492063494
-61.904761904761905
-66.66666666666667
-75.0
-61.904761904761905
-64.17910447761194
-66.66666666666667
-73.01587301587301
-62.5
-70.76923076923077
-66.15384615384616
-73.84615384615384
-67.1875
-70.3125
-66.12903225806451
-70.76923076923077
-71.875
-68.75
-74.60317460317461
-64.61538461538461
-66.66666666666667
-78.125
-72.3076923076923
-62.5
-81.53846153846153
-68.18181818181819
-72.58064516129032
-65.07936507936508
-67.1875
-"finish"
-"Start test3 Clean t=50"
-66.66666666666667
-62.295081967213115
-57.377049180327866
-58.064516129032256
-61.29032258064516
-63.492063492063494
-62.903225806451616
-54.83870967741935
-66.12903225806451
-54.83870967741935
-64.51612903225806
-67.21311475409836
-65.07936507936508
-63.9344262295082
-73.01587301587301
-55.73770491803279
-57.142857142857146
-60.65573770491803
-59.375
-64.51612903225806
-66.66666666666667
-60.0
-62.903225806451616
-72.58064516129032
-64.51612903225806
-53.96825396825397
-57.8125
-65.57377049180327
-63.9344262295082
-70.3125
-"finish"
-"Start test3 Carga Ninos t=20"
-77.77777777777777
-75.40983606557377
-77.41935483870968
-75.0
-73.4375
-79.36507936507937
-84.12698412698413
-76.19047619047619
-77.77777777777777
-78.68852459016394
-80.64516129032258
-83.60655737704919
-76.5625
-85.24590163934427
-77.04918032786885
-73.77049180327869
-78.68852459016394
-66.12903225806451
-77.41935483870968
-74.19354838709677
-82.53968253968254
-80.32786885245902
-74.19354838709677
-77.41935483870968
-77.77777777777777
-80.64516129032258
-82.25806451612904
-85.71428571428571
-76.66666666666667
-68.85245901639344
+Como podemos observar para valores más pequeños del parámetro t el robot encargado de primero llevar los niños al corral obtiene peores resultados que el que se encarga primero de limpiar, lo cual es algo lógico por la forma en que varia el ambiente ya que al variar este todos los niños son sacados del corral, por lo que el robot pasará todo el tiempo tratando de llevar a los niños al corral y estos saliendo por lo que no dedica mucho tiempo a limpiar de forma directa, para valores más grandes de t el encargado de llevar los niños primero obtiene generalmente mejores resultados ya que este tiene tiempo para llevar los niños al corral y comenzar a limpiar de forma directa y eliminar la fuente de suciedad, también podemos observar en la tercera ejecución que el segundo robot obtiene mejores resultados por lo que podemos ver que para un ambiente inicial con un mayor número de suciedad y obstáculos el robot encargado de Limpiar primero obtiene resultados un poco mejores que el otro robot.
 
 
-​       
 
-  
+
+
+
+
+
+
+
+

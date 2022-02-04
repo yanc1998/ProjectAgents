@@ -49,7 +49,7 @@ main = do
   testClean amb1 30 1000 20
   -- ///////////////////////////////////////////////////
 
-  -- ///// ambiente 10x10 7ninos 10obstaculos 10basuras////
+  -- ///// ambiente 10x10 10ninos 20obstaculos 20basuras////
   g1 <- newStdGen
   g2 <- newStdGen
   let amb2 = generateAmbiente 10 10 10 20 20 1 g1 g2
